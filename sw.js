@@ -1,15 +1,10 @@
 // sw.js — Property Bills Manager Service Worker
-// Update CACHE_VERSION with every new deploy to force cache refresh
-const CACHE_VERSION = "bills-tracker-2026-03-29-v1.3";
+const CACHE_VERSION = "bills-tracker-2026-03-29-v1.4";
 const CACHE_NAME = CACHE_VERSION;
 
-self.addEventListener("install", event => {
-  console.log("[SW] Installing:", CACHE_NAME);
-  self.skipWaiting();
-});
+self.addEventListener("install", event => { self.skipWaiting(); });
 
 self.addEventListener("activate", event => {
-  console.log("[SW] Activating:", CACHE_NAME);
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))

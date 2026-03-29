@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Property Bills Manager</title>
 
-  <!-- Favicon & Home Screen Icon (house SVG as data URI) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232c1810'/%3E%3Cpolygon points='32,10 8,32 14,32 14,54 50,54 50,32 56,32' fill='%23f5e6d0' stroke='%238b4513' stroke-width='2'/%3E%3Crect x='24' y='36' width='16' height='18' fill='%238b4513'/%3E%3C/svg%3E" />
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%232c1810'/%3E%3Cpolygon points='90,24 20,88 38,88 38,156 142,156 142,88 160,88' fill='%23f5e6d0'/%3E%3Crect x='66' y='100' width='48' height='56' fill='%238b4513'/%3E%3Ccircle cx='78' cy='128' r='4' fill='%23f5e6d0'/%3E%3C/svg%3E" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -29,7 +28,7 @@
     .header-inner { max-width: 1100px; margin: 0 auto; padding: 20px 24px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .header-left h1.title { font-family: 'Playfair Display', serif; font-size: 32px; color: #f5e6d0; font-weight: 700; letter-spacing: -0.5px; }
     .header-left p.subtitle { font-size: 13px; color: #8b7355; margin-top: 2px; letter-spacing: 2px; text-transform: uppercase; }
-    .build-stamp { font-size: 11px; color: #5a3e2b; margin-top: 4px; font-family: 'Lato', sans-serif; letter-spacing: 0.5px; }
+    .build-stamp { font-size: 11px; color: #c4a882; margin-top: 5px; font-family: 'Lato', sans-serif; letter-spacing: 0.5px; }
     .header-stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .badge { color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
     .badge-red { background: #c0392b; }
@@ -37,8 +36,6 @@
     .stat-pill { background: rgba(255,255,255,0.08); color: #c4a882; padding: 6px 14px; border-radius: 20px; font-size: 13px; }
     .hdr-btn { background: transparent; border: 1.5px solid #c4a882; color: #c4a882; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
     .hdr-btn:hover { background: rgba(196,168,130,0.1); }
-    .hdr-btn-green { border-color: #4a7c59; color: #4a7c59; }
-    .hdr-btn-green:hover { background: rgba(74,124,89,0.1); }
     .hdr-btn-blue { border-color: #4a6b8a; color: #4a6b8a; }
     .hdr-btn-blue:hover { background: rgba(74,107,138,0.1); }
 
@@ -92,20 +89,15 @@
     .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
     .spinner { width: 32px; height: 32px; border: 3px solid #ddd; border-top: 3px solid #8b4513; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
-    /* Modals */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal { background: #fff; border-radius: 16px; padding: 36px; max-width: 520px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
     .modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; color: #2c1810; margin-bottom: 12px; }
     .modal p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
     .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
-    .file-drop { border: 2px dashed #d4c4a8; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .file-drop:hover { border-color: #8b4513; background: #fdf8f0; }
-    .file-drop input { display: none; }
     .cancel-modal-btn { background: transparent; border: 1.5px solid #c0392b; color: #c0392b; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
     .confirm-btn { background: #2c1810; color: #f5e6d0; border: none; border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
     .confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* PDF Export Modal */
     .pdf-option-group { margin-bottom: 16px; }
     .pdf-option-group label.section-label { font-size: 12px; font-weight: 700; color: #8b7355; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
     .pdf-option { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; font-size: 14px; color: #2c1810; }
@@ -117,12 +109,6 @@
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
       .header-inner { flex-direction: column; align-items: flex-start; }
-    }
-
-    /* Print styles for PDF */
-    @media print {
-      body { background: #fff; }
-      header, .controls, .prop-cards, .update-banner { display: none !important; }
     }
   </style>
 </head>
@@ -138,7 +124,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
 <script>
-  const BUILD_VERSION = "2026-03-29 · v1.3";
+  const BUILD_VERSION = "2026-03-29 · v1.4";
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
@@ -243,7 +229,6 @@
       <div class="modal">
         <h2>Export to PDF</h2>
         <p>Choose which property and what to include in the export.</p>
-
         <div class="pdf-option-group">
           <label class="section-label">Property</label>
           ${["All Properties", ...PROPERTIES].map((p, i) => `
@@ -251,7 +236,6 @@
               <input type="radio" name="pdf-prop" value="${p}" ${i===0?"checked":""}> ${p}
             </label>`).join("")}
         </div>
-
         <div class="pdf-option-group">
           <label class="section-label">Include</label>
           <label class="pdf-option"><input type="radio" name="pdf-filter" value="all" checked> All bills</label>
@@ -260,14 +244,12 @@
           <label class="pdf-option"><input type="radio" name="pdf-filter" value="changed"> Already Changed</label>
           <label class="pdf-option"><input type="radio" name="pdf-filter" value="no_change"> No Change Needed</label>
         </div>
-
         <div class="modal-actions">
           <button class="cancel-modal-btn" id="pdf-cancel">Cancel</button>
           <button class="confirm-btn" id="pdf-confirm">Generate PDF</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-
     document.getElementById("pdf-cancel").onclick = () => overlay.remove();
     document.getElementById("pdf-confirm").onclick = () => {
       const prop = document.querySelector('input[name="pdf-prop"]:checked').value;
@@ -280,8 +262,6 @@
   function generatePdf(propFilter, statusFilter) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
-
-    // Filter bills
     let data = bills.filter(b => {
       const propMatch = propFilter === "All Properties" || b.property === propFilter;
       const statusMatch =
@@ -292,10 +272,7 @@
         statusFilter === "no_change" ? (!b.wantToChange && !billNeedsAttention(b)) : true;
       return propMatch && statusMatch;
     });
-
     if (!data.length) { showToast("No bills match those filters.", "error"); return; }
-
-    // Header
     const pageW = doc.internal.pageSize.getWidth();
     doc.setFillColor(44, 24, 16);
     doc.rect(0, 0, pageW, 50, "F");
@@ -308,127 +285,30 @@
     doc.setTextColor(196, 168, 130);
     const subtitle = `${propFilter} · ${statusFilter === "all" ? "All Bills" : statusFilter.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())} · ${data.length} records · ${new Date().toLocaleDateString()}`;
     doc.text(subtitle, 40, 44);
-
-    // Table
     const statusLabel = (b) => {
-      if (billNeedsAttention(b)) return "⚠ Incomplete";
-      if (b.wantToChange && !b.dateChanged) return "↺ Change Pending";
-      if (b.wantToChange && b.dateChanged) return "✓ Changed";
-      return "✓ OK";
+      if (billNeedsAttention(b)) return "Incomplete";
+      if (b.wantToChange && !b.dateChanged) return "Change Pending";
+      if (b.wantToChange && b.dateChanged) return "Changed";
+      return "OK";
     };
-
     doc.autoTable({
       startY: 60,
       head: [["Property", "Vendor", "Description", "Current Method", "Account/Card", "Status", "Change To", "Date Changed", "Notes"]],
-      body: data.map(b => [
-        b.property || "—",
-        b.vendor,
-        b.description || "—",
-        b.currentMethod || "—",
-        b.accountUsed || "—",
-        statusLabel(b),
-        changeToLabel(b),
-        b.dateChanged || "—",
-        b.notes || ""
-      ]),
+      body: data.map(b => [b.property||"—", b.vendor, b.description||"—", b.currentMethod||"—", b.accountUsed||"—", statusLabel(b), changeToLabel(b), b.dateChanged||"—", b.notes||""]),
       headStyles: { fillColor: [44, 24, 16], textColor: [196, 168, 130], fontSize: 9, fontStyle: "bold" },
       bodyStyles: { fontSize: 8, textColor: [60, 40, 20] },
       alternateRowStyles: { fillColor: [253, 248, 240] },
-      columnStyles: {
-        0: { cellWidth: 65 },
-        1: { cellWidth: 90 },
-        2: { cellWidth: 80 },
-        3: { cellWidth: 100 },
-        4: { cellWidth: 75 },
-        5: { cellWidth: 80 },
-        6: { cellWidth: 75 },
-        7: { cellWidth: 65 },
-        8: { cellWidth: "auto" }
-      },
+      columnStyles: { 0:{cellWidth:65}, 1:{cellWidth:90}, 2:{cellWidth:80}, 3:{cellWidth:100}, 4:{cellWidth:75}, 5:{cellWidth:70}, 6:{cellWidth:75}, 7:{cellWidth:65}, 8:{cellWidth:"auto"} },
       margin: { left: 30, right: 30 },
       didDrawPage: (d) => {
-        // Footer
         const pageH = doc.internal.pageSize.getHeight();
-        doc.setFontSize(8);
-        doc.setTextColor(150);
+        doc.setFontSize(8); doc.setTextColor(150);
         doc.text(`Page ${d.pageNumber} · Property Bills Manager · Build ${BUILD_VERSION}`, 30, pageH - 15);
       }
     });
-
     const filename = `bills-${propFilter.replace(/ /g,"-").toLowerCase()}-${new Date().toISOString().slice(0,10)}.pdf`;
     doc.save(filename);
-    showToast(`PDF exported: ${filename}`);
-  }
-
-  // ── Data Export (JSON) ────────────────────────────────────────────────
-  function handleExport() {
-    if (!bills.length) { showToast("No bills to export.", "error"); return; }
-    const json = JSON.stringify(bills, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "property-bills-export.json"; a.click();
-    URL.revokeObjectURL(url);
-    showToast(`Exported ${bills.length} bills.`);
-  }
-
-  // ── Import ────────────────────────────────────────────────────────────
-  function showImportModal() {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.innerHTML = `
-      <div class="modal">
-        <h2>Import Bills</h2>
-        <p>Select your <strong>property-bills-export.json</strong> file. All bills will be imported into Supabase. Duplicates (same ID) will be skipped.</p>
-        <div class="file-drop" id="file-drop-zone">
-          <input type="file" id="import-file" accept=".json" />
-          <div style="font-size:36px;margin-bottom:8px;">📂</div>
-          <div style="color:#8b7355;font-weight:700;">Click to select JSON file</div>
-          <div style="color:#aaa;font-size:13px;margin-top:4px;">property-bills-export.json</div>
-        </div>
-        <div id="import-status" style="margin-top:12px;font-size:13px;color:#555;min-height:20px;"></div>
-        <div class="modal-actions">
-          <button class="cancel-modal-btn" id="import-cancel">Cancel</button>
-          <button class="confirm-btn" id="import-confirm" disabled>Import</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-
-    let importData = null;
-    document.getElementById("file-drop-zone").onclick = () => document.getElementById("import-file").click();
-    document.getElementById("import-file").onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const parsed = JSON.parse(ev.target.result);
-          if (!Array.isArray(parsed)) throw new Error("Not an array");
-          importData = parsed.map(r => r.current_method !== undefined ? dbToApp(r) : r);
-          document.getElementById("import-status").textContent = `✓ Found ${importData.length} bills ready to import.`;
-          document.getElementById("import-status").style.color = "#3d6b4f";
-          document.getElementById("import-confirm").disabled = false;
-        } catch(err) {
-          document.getElementById("import-status").textContent = `✗ Invalid file: ${err.message}`;
-          document.getElementById("import-status").style.color = "#c0392b";
-        }
-      };
-      reader.readAsText(file);
-    };
-    document.getElementById("import-cancel").onclick = () => overlay.remove();
-    document.getElementById("import-confirm").onclick = async () => {
-      if (!importData) return;
-      document.getElementById("import-confirm").textContent = "Importing...";
-      document.getElementById("import-confirm").disabled = true;
-      const existingIds = new Set(bills.map(b => b.id));
-      const toImport = importData.filter(b => !existingIds.has(b.id));
-      let imported = 0;
-      for (const bill of toImport) { try { await saveBill(bill); imported++; } catch(e) { console.error(e); } }
-      bills = await loadBills();
-      overlay.remove();
-      showToast(`Imported ${imported} bills. ${importData.length - toImport.length} duplicates skipped.`);
-      render();
-    };
+    showToast(`PDF saved: ${filename}`);
   }
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -452,8 +332,6 @@
               ${needsChangeCount > 0 ? `<span class="badge badge-amber">↺ ${needsChangeCount} to change</span>` : ""}
               <span class="stat-pill">${bills.length} total bills</span>
               <button class="hdr-btn hdr-btn-blue" onclick="showPdfExportModal()">📄 PDF Export</button>
-              <button class="hdr-btn" onclick="handleExport()">⬇ Export</button>
-              <button class="hdr-btn hdr-btn-green" onclick="showImportModal()">⬆ Import</button>
             </div>
           </div>
         </header>
@@ -520,7 +398,6 @@
     } else {
       const isEdit = currentView === "edit";
       const f = editingBill || { id: generateId(), property:"", vendor:"", description:"", currentMethod:"", accountUsed:"", wantToChange:false, changeToMethod:"", changeToCard:"", dateChanged:"", notes:"", createdAt: new Date().toLocaleDateString() };
-
       app.innerHTML = `
         <header>
           <div class="header-inner">
