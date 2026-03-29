@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Property Bills Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f5f0e8; font-family: 'Lato', sans-serif; min-height: 100vh; }
+    input, select, textarea { font-family: 'Lato', sans-serif; }
+    ::placeholder { color: #bbb; }
+    select option { background: #fff; }
+    .bill-row:hover { background: #fdf8f0 !important; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Header */
+    header { background: #2c1810; }
+    .header-inner { max-width: 1100px; margin: 0 auto; padding: 28px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    h1.title { font-family: 'Playfair Display', serif; font-size: 32px; color: #f5e6d0; font-weight: 700; letter-spacing: -0.5px; }
+    p.subtitle { font-size: 13px; color: #8b7355; margin-top: 2px; letter-spacing: 2px; text-transform: uppercase; }
+    .header-stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .badge { color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+    .badge-red { background: #c0392b; }
+    .badge-amber { background: #b07d2a; }
+    .stat-pill { background: rgba(255,255,255,0.08); color: #c4a882; padding: 6px 14px; border-radius: 20px; font-size: 13px; }
+    .export-btn { background: transparent; border: 1.5px solid #c4a882; color: #c4a882; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
+    .export-btn:hover { background: rgba(196,168,130,0.1); }
+
+    /* Main */
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; animation: fadeIn 0.3s ease; }
+
+    /* Controls */
+    .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .filter-label { font-size: 13px; color: #8b7355; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    select.filter-select { background: #fff; border: 1.5px solid #d4c4a8; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #2c1810; cursor: pointer; outline: none; }
+    .add-btn { background: #2c1810; color: #f5e6d0; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; font-family: 'Lato', sans-serif; }
+    .add-btn:hover { background: #3d261a; }
+
+    /* Property cards */
+    .prop-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .prop-card { background: #fff; border: 1.5px solid #e8dfd0; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .prop-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    .prop-card-name { font-family: 'Playfair Display', serif; font-size: 16px; color: #2c1810; font-weight: 600; }
+    .prop-card-count { font-size: 32px; font-weight: 700; color: #8b4513; font-family: 'Playfair Display', serif; line-height: 1.1; margin-top: 4px; }
+    .prop-card-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px; }
+    .prop-card-alert { margin-top: 8px; font-size: 11px; color: #c0392b; font-weight: 700; }
+    .prop-card-amber { color: #b07d2a !important; }
+
+    /* Table */
+    .table-wrap { background: #fff; border-radius: 16px; border: 1.5px solid #e8dfd0; overflow: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th { background: #2c1810; color: #c4a882; padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; white-space: nowrap; }
+    tr.bill-row { border-bottom: 1px solid #f0e8dc; transition: background 0.15s; }
+    td { padding: 14px 16px; font-size: 14px; color: #444; vertical-align: middle; }
+    .prop-tag { color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .method-tag { background: #f5f0e8; color: #6b4c2a; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .edit-btn { background: transparent; border: 1.5px solid #8b4513; color: #8b4513; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
+    .edit-btn:hover { background: #8b4513; color: #fff; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 80px 20px; background: #fff; border-radius: 16px; border: 1.5px dashed #d4c4a8; }
+
+    /* Form */
+    .form-card { background: #fff; border-radius: 16px; border: 1.5px solid #e8dfd0; padding: 36px; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06); animation: fadeIn 0.3s ease; }
+    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .form-title { font-family: 'Playfair Display', serif; font-size: 26px; color: #2c1810; font-weight: 700; }
+    .back-btn { background: transparent; border: none; color: #8b7355; cursor: pointer; font-size: 14px; font-family: 'Lato', sans-serif; font-weight: 700; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 12px; font-weight: 700; color: #8b7355; text-transform: uppercase; letter-spacing: 1px; }
+    .form-input { border: 1.5px solid #d4c4a8; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #2c1810; outline: none; background: #fdfaf6; font-family: 'Lato', sans-serif; }
+    .form-input:focus { border-color: #8b4513; }
+    .change-section { margin-top: 28px; background: #fdf8f0; border: 1.5px solid #e8dfd0; border-radius: 12px; padding: 20px 24px; }
+    .change-section-header { font-family: 'Playfair Display', serif; font-size: 16px; color: #2c1810; font-weight: 600; margin-bottom: 14px; }
+    .check-row { display: flex; align-items: center; gap: 10px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #f0e8dc; }
+    .delete-btn { background: transparent; border: 1.5px solid #c0392b; color: #c0392b; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
+    .save-btn { background: #2c1810; color: #f5e6d0; border: none; border-radius: 8px; padding: 10px 28px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
+    .save-btn:hover { background: #3d261a; }
+
+    /* Toast */
+    .toast { position: fixed; top: 20px; right: 20px; color: #fff; padding: 12px 20px; border-radius: 8px; font-family: 'Lato', sans-serif; font-weight: 700; font-size: 14px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: fadeIn 0.2s ease; }
+
+    /* Loading */
+    .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #ddd; border-top: 3px solid #8b4513; border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+    /* Import modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: #fff; border-radius: 16px; padding: 36px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; color: #2c1810; margin-bottom: 12px; }
+    .modal p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+    .file-drop { border: 2px dashed #d4c4a8; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .file-drop:hover { border-color: #8b4513; background: #fdf8f0; }
+    .file-drop input { display: none; }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .header-inner { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+<div id="app"></div>
+
+<script>
+  const SUPABASE_URL = "https://viprflxaudxjwsvytrnn.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpcHJmbHhhdWR4andzdnl0cm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Nzc0NjcsImV4cCI6MjA5MDE1MzQ2N30.GCaasqLjpBvcARUO7poDTKH_bvQfasbAX9yLKOeKGK0";
+  const TABLE = "property_bills";
+  const PROPERTIES = ["Allison", "Karmel", "Prospect", "Boathouse"];
+  const PAYMENT_METHODS = ["Credit Card", "Bank Direct Withdrawal (ACH)", "Bank Bill Pay", "Check by Mail"];
+  const CREDIT_CARDS = ["Capital One", "Citi", "Discover"];
+
+  const PROP_COLORS = { Allison: "#4a7c59", Karmel: "#7c4a4a", Prospect: "#4a5d7c", Boathouse: "#7c6b4a" };
+
+  let bills = [];
+  let currentView = "dashboard"; // dashboard | add | edit
+  let editingBill = null;
+  let filterProperty = "All";
+  let filterStatus = "All";
+
+  // ── Supabase helpers ──────────────────────────────────────────────────
+  async function sbFetch(path, options = {}) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": options.prefer || "return=representation",
+        ...options.headers
+      },
+      ...options
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err);
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
+  }
+
+  async function loadBills() {
+    try {
+      const data = await sbFetch(`${TABLE}?order=created_at.asc`, { method: "GET" });
+      // Map snake_case from DB to camelCase for app
+      return data.map(dbToApp);
+    } catch (e) {
+      console.error("Load error:", e);
+      showToast("Could not load bills. Check Supabase connection.", "error");
+      return [];
+    }
+  }
+
+  async function saveBill(bill) {
+    const row = appToDb(bill);
+    try {
+      await sbFetch(`${TABLE}`, {
+        method: "POST",
+        prefer: "return=minimal",
+        body: JSON.stringify(row)
+      });
+    } catch (e) {
+      console.error("Save error:", e);
+      showToast("Could not save bill.", "error");
+    }
+  }
+
+  async function updateBill(bill) {
+    const row = appToDb(bill);
+    try {
+      await sbFetch(`${TABLE}?id=eq.${bill.id}`, {
+        method: "PATCH",
+        prefer: "return=minimal",
+        body: JSON.stringify(row)
+      });
+    } catch (e) {
+      console.error("Update error:", e);
+      showToast("Could not update bill.", "error");
+    }
+  }
+
+  async function deleteBill(id) {
+    try {
+      await sbFetch(`${TABLE}?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    } catch (e) {
+      console.error("Delete error:", e);
+      showToast("Could not delete bill.", "error");
+    }
+  }
+
+  // camelCase <-> snake_case mapping
+  function appToDb(b) {
+    return {
+      id: b.id,
+      property: b.property || null,
+      vendor: b.vendor,
+      description: b.description || null,
+      current_method: b.currentMethod || null,
+      account_used: b.accountUsed || null,
+      want_to_change: b.wantToChange || false,
+      change_to_method: b.changeToMethod || null,
+      change_to_card: b.changeToCard || null,
+      date_changed: b.dateChanged || null,
+      notes: b.notes || null,
+      created_at: b.createdAt || new Date().toLocaleDateString()
+    };
+  }
+
+  function dbToApp(r) {
+    return {
+      id: r.id,
+      property: r.property || "",
+      vendor: r.vendor || "",
+      description: r.description || "",
+      currentMethod: r.current_method || "",
+      accountUsed: r.account_used || "",
+      wantToChange: r.want_to_change || false,
+      changeToMethod: r.change_to_method || "",
+      changeToCard: r.change_to_card || "",
+      dateChanged: r.date_changed || "",
+      notes: r.notes || "",
+      createdAt: r.created_at || ""
+    };
+  }
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────
+  function showToast(msg, type = "success") {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.style.background = type === "error" ? "#c0392b" : "#3d6b4f";
+    t.textContent = msg;
+    document.getElementById("toast-container").appendChild(t);
+    setTimeout(() => t.remove(), 2800);
+  }
+
+  // ── Computed ──────────────────────────────────────────────────────────
+  function billNeedsAttention(b) {
+    return !b.property || !b.currentMethod;
+  }
+
+  function getFiltered() {
+    return bills.filter(b => {
+      const propMatch = filterProperty === "All" || b.property === filterProperty;
+      const statusMatch =
+        filterStatus === "All" ||
+        (filterStatus === "Needs Attention" && billNeedsAttention(b)) ||
+        (filterStatus === "Needs Change" && b.wantToChange && !b.dateChanged) ||
+        (filterStatus === "Changed" && b.wantToChange && b.dateChanged) ||
+        (filterStatus === "No Change" && !b.wantToChange && !billNeedsAttention(b));
+      return propMatch && statusMatch;
+    });
+  }
+
+  function changeToLabel(b) {
+    if (b.changeToMethod === "Credit Card" && b.changeToCard) return `CC · ${b.changeToCard}`;
+    return b.changeToMethod || "—";
+  }
+
+  // ── Export ────────────────────────────────────────────────────────────
+  function handleExport() {
+    if (!bills.length) { showToast("No bills to export.", "error"); return; }
+    const json = JSON.stringify(bills, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "property-bills-export.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${bills.length} bills.`);
+  }
+
+  // ── Import ────────────────────────────────────────────────────────────
+  function showImportModal() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal">
+        <h2>Import Bills</h2>
+        <p>Select your <strong>property-bills-export.json</strong> file exported from the Claude app. All bills in the file will be imported into Supabase. Duplicates (same ID) will be skipped.</p>
+        <div class="file-drop" id="file-drop-zone">
+          <input type="file" id="import-file" accept=".json" />
+          <div style="font-size:36px;margin-bottom:8px;">📂</div>
+          <div style="color:#8b7355;font-weight:700;">Click to select JSON file</div>
+          <div style="color:#aaa;font-size:13px;margin-top:4px;">property-bills-export.json</div>
+        </div>
+        <div id="import-status" style="margin-top:12px;font-size:13px;color:#555;min-height:20px;"></div>
+        <div class="modal-actions">
+          <button class="delete-btn" id="import-cancel">Cancel</button>
+          <button class="save-btn" id="import-confirm" disabled>Import</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    let importData = null;
+
+    document.getElementById("file-drop-zone").onclick = () => document.getElementById("import-file").click();
+    document.getElementById("import-file").onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          importData = JSON.parse(ev.target.result);
+          if (!Array.isArray(importData)) throw new Error("Invalid format");
+          document.getElementById("import-status").textContent = `✓ Found ${importData.length} bills ready to import.`;
+          document.getElementById("import-status").style.color = "#3d6b4f";
+          document.getElementById("import-confirm").disabled = false;
+        } catch {
+          document.getElementById("import-status").textContent = "✗ Invalid file format.";
+          document.getElementById("import-status").style.color = "#c0392b";
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    document.getElementById("import-cancel").onclick = () => overlay.remove();
+
+    document.getElementById("import-confirm").onclick = async () => {
+      if (!importData) return;
+      document.getElementById("import-confirm").textContent = "Importing...";
+      document.getElementById("import-confirm").disabled = true;
+
+      const existingIds = new Set(bills.map(b => b.id));
+      const toImport = importData.filter(b => !existingIds.has(b.id));
+      let imported = 0;
+
+      for (const bill of toImport) {
+        try {
+          await saveBill(bill);
+          imported++;
+        } catch (e) {
+          console.error("Import error for bill:", bill.vendor, e);
+        }
+      }
+
+      bills = await loadBills();
+      overlay.remove();
+      showToast(`Imported ${imported} bills. ${importData.length - toImport.length} duplicates skipped.`);
+      render();
+    };
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────
+  function render() {
+    const app = document.getElementById("app");
+
+    const needsAttentionCount = bills.filter(billNeedsAttention).length;
+    const needsChangeCount = bills.filter(b => b.wantToChange && !b.dateChanged).length;
+    const filtered = getFiltered();
+
+    if (currentView === "dashboard") {
+      app.innerHTML = `
+        <header>
+          <div class="header-inner">
+            <div>
+              <h1 class="title">Property Bills</h1>
+              <p class="subtitle">Payment Manager · 4 Properties</p>
+            </div>
+            <div class="header-stats">
+              ${needsAttentionCount > 0 ? `<span class="badge badge-red">⚠ ${needsAttentionCount} incomplete</span>` : ""}
+              ${needsChangeCount > 0 ? `<span class="badge badge-amber">↺ ${needsChangeCount} to change</span>` : ""}
+              <span class="stat-pill">${bills.length} total bills</span>
+              <button class="export-btn" onclick="handleExport()">⬇ Export</button>
+              <button class="export-btn" onclick="showImportModal()" style="border-color:#4a7c59;color:#4a7c59;">⬆ Import</button>
+            </div>
+          </div>
+        </header>
+        <main>
+          <div class="controls">
+            <div class="filters">
+              <span class="filter-label">Property</span>
+              <select class="filter-select" onchange="filterProperty=this.value;render()">
+                ${["All",...PROPERTIES].map(p=>`<option ${filterProperty===p?"selected":""}>${p}</option>`).join("")}
+              </select>
+              <span class="filter-label">Status</span>
+              <select class="filter-select" onchange="filterStatus=this.value;render()">
+                ${["All","Needs Attention","Needs Change","Changed","No Change"].map(s=>`<option ${filterStatus===s?"selected":""}>${s}</option>`).join("")}
+              </select>
+            </div>
+            <button class="add-btn" onclick="openAdd()">+ Add Bill</button>
+          </div>
+
+          <div class="prop-cards">
+            ${PROPERTIES.map(p => {
+              const count = bills.filter(b => b.property === p).length;
+              const inc = bills.filter(b => b.property === p && billNeedsAttention(b)).length;
+              const chg = bills.filter(b => b.property === p && b.wantToChange && !b.dateChanged).length;
+              return `
+                <div class="prop-card" onclick="filterProperty='${p}';filterStatus='All';render()">
+                  <div class="prop-card-name">${p}</div>
+                  <div class="prop-card-count">${count}</div>
+                  <div class="prop-card-label">bills</div>
+                  ${inc > 0 ? `<div class="prop-card-alert">⚠ ${inc} incomplete</div>` : ""}
+                  ${chg > 0 ? `<div class="prop-card-alert prop-card-amber">↺ ${chg} to change</div>` : ""}
+                </div>`;
+            }).join("")}
+          </div>
+
+          ${filtered.length === 0 ? `
+            <div class="empty">
+              <div style="font-size:48px">🏠</div>
+              <p style="margin-top:12px;color:#8b7355;font-family:'Playfair Display',serif;font-size:18px">No bills yet</p>
+              <p style="color:#aaa;margin-top:6px;font-size:14px">Click "+ Add Bill" to get started</p>
+            </div>
+          ` : `
+            <div class="table-wrap">
+              <table>
+                <thead><tr>${["Property","Vendor","Current Method","Account / Card","Status","Changed To","Date Changed","Actions"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+                <tbody>
+                  ${filtered.map(b => `
+                    <tr class="bill-row">
+                      <td><span class="prop-tag" style="background:${PROP_COLORS[b.property]||'#888'}">${b.property||"—"}</span></td>
+                      <td style="font-weight:600;color:#2c1810">${b.vendor}</td>
+                      <td>${b.currentMethod ? `<span class="method-tag">${b.currentMethod}</span>` : `<span style="color:#ccc">—</span>`}</td>
+                      <td style="color:#555;font-size:13px">${b.accountUsed||"—"}</td>
+                      <td>${billNeedsAttention(b)
+                        ? `<span style="color:#8b4513;font-weight:700;font-size:13px">⚠ Incomplete</span>`
+                        : b.wantToChange
+                          ? `<span style="color:${b.dateChanged?"#3d6b4f":"#c0392b"};font-weight:700;font-size:13px">${b.dateChanged?"✓ Done":"↺ Change"}</span>`
+                          : `<span style="color:#aaa;font-size:13px">✓ OK</span>`
+                      }</td>
+                      <td style="font-size:13px;color:#555">${changeToLabel(b)}</td>
+                      <td style="font-size:13px;color:#555">${b.dateChanged||"—"}</td>
+                      <td><button class="edit-btn" onclick="openEdit('${b.id}')">Edit</button></td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </main>
+      `;
+    } else {
+      // Add / Edit form
+      const isEdit = currentView === "edit";
+      const f = editingBill || { id: generateId(), property: "", vendor: "", description: "", currentMethod: "", accountUsed: "", wantToChange: false, changeToMethod: "", changeToCard: "", dateChanged: "", notes: "", createdAt: new Date().toLocaleDateString() };
+
+      app.innerHTML = `
+        <header>
+          <div class="header-inner">
+            <div>
+              <h1 class="title">Property Bills</h1>
+              <p class="subtitle">Payment Manager · 4 Properties</p>
+            </div>
+          </div>
+        </header>
+        <main>
+          <div class="form-card">
+            <div class="form-header">
+              <h2 class="form-title">${isEdit ? "Edit Bill" : "Add New Bill"}</h2>
+              <button class="back-btn" onclick="currentView='dashboard';render()">← Back</button>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Property</label>
+                <select class="form-input" id="f-property">
+                  <option value="">Select property...</option>
+                  ${PROPERTIES.map(p=>`<option ${f.property===p?"selected":""}>${p}</option>`).join("")}
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Vendor / Biller <span style="color:#c0392b">*</span></label>
+                <input class="form-input" id="f-vendor" placeholder="e.g. PECO, Comcast, Water Authority" value="${f.vendor}" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Description</label>
+                <input class="form-input" id="f-description" placeholder="e.g. Electric, Internet, Mortgage" value="${f.description}" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Current Payment Method</label>
+                <select class="form-input" id="f-currentMethod" onchange="onMethodChange()">
+                  <option value="">Select method...</option>
+                  ${PAYMENT_METHODS.map(m=>`<option ${f.currentMethod===m?"selected":""}>${m}</option>`).join("")}
+                </select>
+              </div>
+              <div class="form-group" id="account-group">
+                <label class="form-label" id="account-label">${f.currentMethod==="Credit Card"?"Card Used":"Account Used"}</label>
+                ${f.currentMethod === "Credit Card"
+                  ? `<select class="form-input" id="f-accountUsed"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option ${f.accountUsed===c?"selected":""}>${c}</option>`).join("")}</select>`
+                  : `<input class="form-input" id="f-accountUsed" placeholder="e.g. TD Checking ···1234" value="${f.accountUsed}" />`
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notes</label>
+                <input class="form-input" id="f-notes" placeholder="Anything else to remember" value="${f.notes}" />
+              </div>
+            </div>
+
+            <div class="change-section">
+              <div class="change-section-header">Payment Change</div>
+              <div class="check-row">
+                <input type="checkbox" id="f-wantToChange" ${f.wantToChange?"checked":""} onchange="onWantToChangeToggle()" style="width:18px;height:18px;accent-color:#8b4513;cursor:pointer" />
+                <label for="f-wantToChange" class="form-label" style="margin-bottom:0;cursor:pointer">I want to change how this bill is paid</label>
+              </div>
+              <div id="change-fields" style="display:${f.wantToChange?"block":"none"};margin-top:16px">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label">Change To</label>
+                    <select class="form-input" id="f-changeToMethod" onchange="onChangeToMethodChange()">
+                      <option value="">Select new method...</option>
+                      ${PAYMENT_METHODS.map(m=>`<option ${f.changeToMethod===m?"selected":""}>${m}</option>`).join("")}
+                    </select>
+                  </div>
+                  <div class="form-group" id="changeto-card-group" style="display:${f.changeToMethod==="Credit Card"?"flex":"flex"};flex-direction:column;gap:6px">
+                    ${f.changeToMethod === "Credit Card"
+                      ? `<label class="form-label">New Card</label><select class="form-input" id="f-changeToCard"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option ${f.changeToCard===c?"selected":""}>${c}</option>`).join("")}</select>`
+                      : `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" value="${f.dateChanged}" />`
+                    }
+                  </div>
+                </div>
+                ${f.changeToMethod === "Credit Card" ? `
+                  <div class="form-group" style="margin-top:16px;max-width:calc(50% - 14px)">
+                    <label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label>
+                    <input type="date" class="form-input" id="f-dateChanged" value="${f.dateChanged}" />
+                  </div>` : ""
+                }
+              </div>
+            </div>
+
+            <div class="form-actions">
+              ${isEdit ? `<button class="delete-btn" onclick="handleDelete('${f.id}')">Delete Bill</button>` : ""}
+              <button class="save-btn" onclick="handleSave('${f.id}','${isEdit}')">${isEdit?"Save Changes":"Add Bill"}</button>
+            </div>
+          </div>
+        </main>
+      `;
+    }
+  }
+
+  // ── Form helpers ──────────────────────────────────────────────────────
+  function onMethodChange() {
+    const method = document.getElementById("f-currentMethod").value;
+    const group = document.getElementById("account-group");
+    const label = document.getElementById("account-label");
+    if (method === "Credit Card") {
+      label.textContent = "Card Used";
+      group.querySelector(".form-input")?.remove();
+      const sel = document.createElement("select");
+      sel.className = "form-input";
+      sel.id = "f-accountUsed";
+      sel.innerHTML = `<option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}`;
+      group.appendChild(sel);
+    } else {
+      label.textContent = "Account Used";
+      group.querySelector(".form-input")?.remove();
+      const inp = document.createElement("input");
+      inp.className = "form-input";
+      inp.id = "f-accountUsed";
+      inp.placeholder = "e.g. TD Checking ···1234";
+      group.appendChild(inp);
+    }
+  }
+
+  function onWantToChangeToggle() {
+    const checked = document.getElementById("f-wantToChange").checked;
+    document.getElementById("change-fields").style.display = checked ? "block" : "none";
+  }
+
+  function onChangeToMethodChange() {
+    const method = document.getElementById("f-changeToMethod").value;
+    const group = document.getElementById("changeto-card-group");
+    // Remove existing date field if present outside grid
+    const extraDate = document.getElementById("extra-date-group");
+    if (extraDate) extraDate.remove();
+
+    if (method === "Credit Card") {
+      group.innerHTML = `<label class="form-label">New Card</label><select class="form-input" id="f-changeToCard"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}</select>`;
+      // Add date field below grid
+      const dateGroup = document.createElement("div");
+      dateGroup.id = "extra-date-group";
+      dateGroup.className = "form-group";
+      dateGroup.style.cssText = "margin-top:16px;max-width:calc(50% - 14px)";
+      dateGroup.innerHTML = `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" />`;
+      document.getElementById("change-fields").appendChild(dateGroup);
+    } else {
+      group.innerHTML = `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" />`;
+    }
+  }
+
+  function getVal(id) {
+    const el = document.getElementById(id);
+    if (!el) return "";
+    if (el.type === "checkbox") return el.checked;
+    return el.value || "";
+  }
+
+  async function handleSave(id, isEditStr) {
+    const vendor = getVal("f-vendor").trim();
+    if (!vendor) { showToast("Please enter at least a Vendor / Biller name.", "error"); return; }
+
+    const bill = {
+      id,
+      property: getVal("f-property"),
+      vendor,
+      description: getVal("f-description"),
+      currentMethod: getVal("f-currentMethod"),
+      accountUsed: getVal("f-accountUsed"),
+      wantToChange: getVal("f-wantToChange"),
+      changeToMethod: getVal("f-changeToMethod"),
+      changeToCard: getVal("f-changeToCard"),
+      dateChanged: getVal("f-dateChanged"),
+      notes: getVal("f-notes"),
+      createdAt: isEditStr === "true" ? (editingBill?.createdAt || new Date().toLocaleDateString()) : new Date().toLocaleDateString()
+    };
+
+    const btn = document.querySelector(".save-btn");
+    btn.textContent = "Saving...";
+    btn.disabled = true;
+
+    if (isEditStr === "true") {
+      await updateBill(bill);
+      showToast("Bill updated.");
+    } else {
+      await saveBill(bill);
+      showToast("Bill added.");
+    }
+
+    bills = await loadBills();
+    currentView = "dashboard";
+    editingBill = null;
+    render();
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Delete this bill?")) return;
+    await deleteBill(id);
+    bills = await loadBills();
+    currentView = "dashboard";
+    editingBill = null;
+    showToast("Bill removed.");
+    render();
+  }
+
+  function openAdd() {
+    editingBill = null;
+    currentView = "add";
+    render();
+  }
+
+  function openEdit(id) {
+    editingBill = bills.find(b => b.id === id);
+    currentView = "edit";
+    render();
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────
+  (async () => {
+    document.getElementById("app").innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <p style="color:#8b7355;margin-top:16px;font-family:'Playfair Display',serif">Loading your bills...</p>
+      </div>`;
+    bills = await loadBills();
+    render();
+  })();
+</script>
+</body>
+</html>
