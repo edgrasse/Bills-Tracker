@@ -4,7 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Property Bills Manager</title>
+
+  <!-- Favicon & Home Screen Icon (house SVG as data URI) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232c1810'/%3E%3Cpolygon points='32,10 8,32 14,32 14,54 50,54 50,32 56,32' fill='%23f5e6d0' stroke='%238b4513' stroke-width='2'/%3E%3Crect x='24' y='36' width='16' height='18' fill='%238b4513'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='32' fill='%232c1810'/%3E%3Cpolygon points='90,24 20,88 38,88 38,156 142,156 142,88 160,88' fill='%23f5e6d0'/%3E%3Crect x='66' y='100' width='48' height='56' fill='%238b4513'/%3E%3Ccircle cx='78' cy='128' r='4' fill='%23f5e6d0'/%3E%3C/svg%3E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bills" />
+  <meta name="theme-color" content="#2c1810" />
+
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #f5f0e8; font-family: 'Lato', sans-serif; min-height: 100vh; }
@@ -25,10 +35,12 @@
     .badge-red { background: #c0392b; }
     .badge-amber { background: #b07d2a; }
     .stat-pill { background: rgba(255,255,255,0.08); color: #c4a882; padding: 6px 14px; border-radius: 20px; font-size: 13px; }
-    .export-btn { background: transparent; border: 1.5px solid #c4a882; color: #c4a882; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
-    .export-btn:hover { background: rgba(196,168,130,0.1); }
-    .import-btn { background: transparent; border: 1.5px solid #4a7c59; color: #4a7c59; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
-    .import-btn:hover { background: rgba(74,124,89,0.1); }
+    .hdr-btn { background: transparent; border: 1.5px solid #c4a882; color: #c4a882; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
+    .hdr-btn:hover { background: rgba(196,168,130,0.1); }
+    .hdr-btn-green { border-color: #4a7c59; color: #4a7c59; }
+    .hdr-btn-green:hover { background: rgba(74,124,89,0.1); }
+    .hdr-btn-blue { border-color: #4a6b8a; color: #4a6b8a; }
+    .hdr-btn-blue:hover { background: rgba(74,107,138,0.1); }
 
     main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; animation: fadeIn 0.3s ease; }
     .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
@@ -80,10 +92,11 @@
     .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
     .spinner { width: 32px; height: 32px; border: 3px solid #ddd; border-top: 3px solid #8b4513; border-radius: 50%; animation: spin 0.8s linear infinite; }
 
+    /* Modals */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal { background: #fff; border-radius: 16px; padding: 36px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal { background: #fff; border-radius: 16px; padding: 36px; max-width: 520px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
     .modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; color: #2c1810; margin-bottom: 12px; }
-    .modal p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+    .modal p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 16px; }
     .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
     .file-drop { border: 2px dashed #d4c4a8; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
     .file-drop:hover { border-color: #8b4513; background: #fdf8f0; }
@@ -92,13 +105,24 @@
     .confirm-btn { background: #2c1810; color: #f5e6d0; border: none; border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
     .confirm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* Update banner */
+    /* PDF Export Modal */
+    .pdf-option-group { margin-bottom: 16px; }
+    .pdf-option-group label.section-label { font-size: 12px; font-weight: 700; color: #8b7355; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
+    .pdf-option { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; font-size: 14px; color: #2c1810; }
+    .pdf-option input { width: 16px; height: 16px; accent-color: #8b4513; cursor: pointer; }
+
     .update-banner { background: #3d6b4f; color: #fff; text-align: center; padding: 10px 20px; font-size: 13px; font-weight: 700; font-family: 'Lato', sans-serif; display: flex; align-items: center; justify-content: center; gap: 12px; }
     .update-banner button { background: #fff; color: #3d6b4f; border: none; border-radius: 6px; padding: 4px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
 
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
       .header-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* Print styles for PDF */
+    @media print {
+      body { background: #fff; }
+      header, .controls, .prop-cards, .update-banner { display: none !important; }
     }
   </style>
 </head>
@@ -110,37 +134,31 @@
 <div id="toast-container"></div>
 <div id="app"></div>
 
-<script>
-  // ── Build Info ────────────────────────────────────────────────────────
-  const BUILD_VERSION = "2026-03-29 · v1.2";
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-  // ── Service Worker Registration ───────────────────────────────────────
+<script>
+  const BUILD_VERSION = "2026-03-29 · v1.3";
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        const nw = reg.installing;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller)
             document.getElementById('update-banner').style.display = 'flex';
-          }
         });
       });
-    }).catch(err => console.log('SW registration failed:', err));
-
-    // When new SW takes control, reload
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
-    });
+    }).catch(err => console.log('SW:', err));
+    navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
   }
 
   function reloadApp() {
-    if (navigator.serviceWorker.controller) {
+    if (navigator.serviceWorker.controller)
       navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-    }
     window.location.reload(true);
   }
 
-  // ── Config ────────────────────────────────────────────────────────────
   const SUPABASE_URL = "https://viprflxaudxjwsvytrnn.supabase.co";
   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpcHJmbHhhdWR4andzdnl0cm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Nzc0NjcsImV4cCI6MjA5MDE1MzQ2N30.GCaasqLjpBvcARUO7poDTKH_bvQfasbAX9yLKOeKGK0";
   const TABLE = "property_bills";
@@ -155,16 +173,9 @@
   let filterProperty = "All";
   let filterStatus = "All";
 
-  // ── Supabase ──────────────────────────────────────────────────────────
   async function sbFetch(path, options = {}) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": options.prefer || "return=representation",
-        ...options.headers
-      },
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": options.prefer || "return=representation", ...options.headers },
       ...options
     });
     if (!res.ok) { const err = await res.text(); throw new Error(err); }
@@ -177,65 +188,25 @@
       const data = await sbFetch(`${TABLE}?order=created_at.asc`, { method: "GET" });
       return data.map(dbToApp);
     } catch (e) {
-      console.error("Load error:", e);
-      showToast("Could not load bills. Check Supabase connection.", "error");
+      showToast("Could not load bills. Check connection.", "error");
       return [];
     }
   }
 
-  async function saveBill(bill) {
-    const row = appToDb(bill);
-    await sbFetch(TABLE, { method: "POST", prefer: "return=minimal", body: JSON.stringify(row) });
-  }
-
-  async function updateBill(bill) {
-    const row = appToDb(bill);
-    await sbFetch(`${TABLE}?id=eq.${bill.id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify(row) });
-  }
-
-  async function deleteBill(id) {
-    await sbFetch(`${TABLE}?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
-  }
+  async function saveBill(bill) { await sbFetch(TABLE, { method: "POST", prefer: "return=minimal", body: JSON.stringify(appToDb(bill)) }); }
+  async function updateBill(bill) { await sbFetch(`${TABLE}?id=eq.${bill.id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify(appToDb(bill)) }); }
+  async function deleteBill(id) { await sbFetch(`${TABLE}?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" }); }
 
   function appToDb(b) {
-    return {
-      id: b.id,
-      property: b.property || null,
-      vendor: b.vendor,
-      description: b.description || null,
-      current_method: b.currentMethod || null,
-      account_used: b.accountUsed || null,
-      want_to_change: b.wantToChange || false,
-      change_to_method: b.changeToMethod || null,
-      change_to_card: b.changeToCard || null,
-      date_changed: b.dateChanged || null,
-      notes: b.notes || null,
-      created_at: b.createdAt || new Date().toLocaleDateString()
-    };
+    return { id: b.id, property: b.property||null, vendor: b.vendor, description: b.description||null, current_method: b.currentMethod||null, account_used: b.accountUsed||null, want_to_change: b.wantToChange||false, change_to_method: b.changeToMethod||null, change_to_card: b.changeToCard||null, date_changed: b.dateChanged||null, notes: b.notes||null, created_at: b.createdAt||new Date().toLocaleDateString() };
   }
 
   function dbToApp(r) {
-    return {
-      id: r.id,
-      property: r.property || "",
-      vendor: r.vendor || "",
-      description: r.description || "",
-      currentMethod: r.current_method || "",
-      accountUsed: r.account_used || "",
-      wantToChange: r.want_to_change || false,
-      changeToMethod: r.change_to_method || "",
-      changeToCard: r.change_to_card || "",
-      dateChanged: r.date_changed || "",
-      notes: r.notes || "",
-      createdAt: r.created_at || ""
-    };
+    return { id: r.id, property: r.property||"", vendor: r.vendor||"", description: r.description||"", currentMethod: r.current_method||"", accountUsed: r.account_used||"", wantToChange: r.want_to_change||false, changeToMethod: r.change_to_method||"", changeToCard: r.change_to_card||"", dateChanged: r.date_changed||"", notes: r.notes||"", createdAt: r.created_at||"" };
   }
 
-  function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
-  }
+  function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
-  // ── Toast ─────────────────────────────────────────────────────────────
   function showToast(msg, type = "success") {
     const t = document.createElement("div");
     t.className = "toast";
@@ -245,14 +216,12 @@
     setTimeout(() => t.remove(), 2800);
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────
   function billNeedsAttention(b) { return !b.property || !b.currentMethod; }
 
   function getFiltered() {
     return bills.filter(b => {
       const propMatch = filterProperty === "All" || b.property === filterProperty;
-      const statusMatch =
-        filterStatus === "All" ||
+      const statusMatch = filterStatus === "All" ||
         (filterStatus === "Needs Attention" && billNeedsAttention(b)) ||
         (filterStatus === "Needs Change" && b.wantToChange && !b.dateChanged) ||
         (filterStatus === "Changed" && b.wantToChange && b.dateChanged) ||
@@ -266,16 +235,139 @@
     return b.changeToMethod || "—";
   }
 
-  // ── Export ────────────────────────────────────────────────────────────
+  // ── PDF Export ────────────────────────────────────────────────────────
+  function showPdfExportModal() {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal">
+        <h2>Export to PDF</h2>
+        <p>Choose which property and what to include in the export.</p>
+
+        <div class="pdf-option-group">
+          <label class="section-label">Property</label>
+          ${["All Properties", ...PROPERTIES].map((p, i) => `
+            <label class="pdf-option">
+              <input type="radio" name="pdf-prop" value="${p}" ${i===0?"checked":""}> ${p}
+            </label>`).join("")}
+        </div>
+
+        <div class="pdf-option-group">
+          <label class="section-label">Include</label>
+          <label class="pdf-option"><input type="radio" name="pdf-filter" value="all" checked> All bills</label>
+          <label class="pdf-option"><input type="radio" name="pdf-filter" value="needs_attention"> Needs Attention (incomplete)</label>
+          <label class="pdf-option"><input type="radio" name="pdf-filter" value="needs_change"> Needs Change (pending)</label>
+          <label class="pdf-option"><input type="radio" name="pdf-filter" value="changed"> Already Changed</label>
+          <label class="pdf-option"><input type="radio" name="pdf-filter" value="no_change"> No Change Needed</label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="cancel-modal-btn" id="pdf-cancel">Cancel</button>
+          <button class="confirm-btn" id="pdf-confirm">Generate PDF</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    document.getElementById("pdf-cancel").onclick = () => overlay.remove();
+    document.getElementById("pdf-confirm").onclick = () => {
+      const prop = document.querySelector('input[name="pdf-prop"]:checked').value;
+      const filter = document.querySelector('input[name="pdf-filter"]:checked').value;
+      overlay.remove();
+      generatePdf(prop, filter);
+    };
+  }
+
+  function generatePdf(propFilter, statusFilter) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
+
+    // Filter bills
+    let data = bills.filter(b => {
+      const propMatch = propFilter === "All Properties" || b.property === propFilter;
+      const statusMatch =
+        statusFilter === "all" ? true :
+        statusFilter === "needs_attention" ? billNeedsAttention(b) :
+        statusFilter === "needs_change" ? (b.wantToChange && !b.dateChanged) :
+        statusFilter === "changed" ? (b.wantToChange && b.dateChanged) :
+        statusFilter === "no_change" ? (!b.wantToChange && !billNeedsAttention(b)) : true;
+      return propMatch && statusMatch;
+    });
+
+    if (!data.length) { showToast("No bills match those filters.", "error"); return; }
+
+    // Header
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(44, 24, 16);
+    doc.rect(0, 0, pageW, 50, "F");
+    doc.setTextColor(245, 230, 208);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Property Bills Manager", 40, 32);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(196, 168, 130);
+    const subtitle = `${propFilter} · ${statusFilter === "all" ? "All Bills" : statusFilter.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())} · ${data.length} records · ${new Date().toLocaleDateString()}`;
+    doc.text(subtitle, 40, 44);
+
+    // Table
+    const statusLabel = (b) => {
+      if (billNeedsAttention(b)) return "⚠ Incomplete";
+      if (b.wantToChange && !b.dateChanged) return "↺ Change Pending";
+      if (b.wantToChange && b.dateChanged) return "✓ Changed";
+      return "✓ OK";
+    };
+
+    doc.autoTable({
+      startY: 60,
+      head: [["Property", "Vendor", "Description", "Current Method", "Account/Card", "Status", "Change To", "Date Changed", "Notes"]],
+      body: data.map(b => [
+        b.property || "—",
+        b.vendor,
+        b.description || "—",
+        b.currentMethod || "—",
+        b.accountUsed || "—",
+        statusLabel(b),
+        changeToLabel(b),
+        b.dateChanged || "—",
+        b.notes || ""
+      ]),
+      headStyles: { fillColor: [44, 24, 16], textColor: [196, 168, 130], fontSize: 9, fontStyle: "bold" },
+      bodyStyles: { fontSize: 8, textColor: [60, 40, 20] },
+      alternateRowStyles: { fillColor: [253, 248, 240] },
+      columnStyles: {
+        0: { cellWidth: 65 },
+        1: { cellWidth: 90 },
+        2: { cellWidth: 80 },
+        3: { cellWidth: 100 },
+        4: { cellWidth: 75 },
+        5: { cellWidth: 80 },
+        6: { cellWidth: 75 },
+        7: { cellWidth: 65 },
+        8: { cellWidth: "auto" }
+      },
+      margin: { left: 30, right: 30 },
+      didDrawPage: (d) => {
+        // Footer
+        const pageH = doc.internal.pageSize.getHeight();
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Page ${d.pageNumber} · Property Bills Manager · Build ${BUILD_VERSION}`, 30, pageH - 15);
+      }
+    });
+
+    const filename = `bills-${propFilter.replace(/ /g,"-").toLowerCase()}-${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+    showToast(`PDF exported: ${filename}`);
+  }
+
+  // ── Data Export (JSON) ────────────────────────────────────────────────
   function handleExport() {
     if (!bills.length) { showToast("No bills to export.", "error"); return; }
     const json = JSON.stringify(bills, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = "property-bills-export.json";
-    a.click();
+    a.href = url; a.download = "property-bills-export.json"; a.click();
     URL.revokeObjectURL(url);
     showToast(`Exported ${bills.length} bills.`);
   }
@@ -303,7 +395,6 @@
     document.body.appendChild(overlay);
 
     let importData = null;
-
     document.getElementById("file-drop-zone").onclick = () => document.getElementById("import-file").click();
     document.getElementById("import-file").onchange = (e) => {
       const file = e.target.files[0];
@@ -312,25 +403,18 @@
       reader.onload = (ev) => {
         try {
           const parsed = JSON.parse(ev.target.result);
-          // Accept both camelCase (from Claude app) and snake_case (from Supabase export)
           if (!Array.isArray(parsed)) throw new Error("Not an array");
-          // Normalize: if records have snake_case keys, convert to camelCase
-          importData = parsed.map(r => {
-            if (r.current_method !== undefined) return dbToApp(r); // snake_case
-            if (r.vendor !== undefined) return r; // already camelCase
-            throw new Error("Unknown format");
-          });
+          importData = parsed.map(r => r.current_method !== undefined ? dbToApp(r) : r);
           document.getElementById("import-status").textContent = `✓ Found ${importData.length} bills ready to import.`;
           document.getElementById("import-status").style.color = "#3d6b4f";
           document.getElementById("import-confirm").disabled = false;
         } catch(err) {
-          document.getElementById("import-status").textContent = `✗ Invalid file format: ${err.message}`;
+          document.getElementById("import-status").textContent = `✗ Invalid file: ${err.message}`;
           document.getElementById("import-status").style.color = "#c0392b";
         }
       };
       reader.readAsText(file);
     };
-
     document.getElementById("import-cancel").onclick = () => overlay.remove();
     document.getElementById("import-confirm").onclick = async () => {
       if (!importData) return;
@@ -339,10 +423,7 @@
       const existingIds = new Set(bills.map(b => b.id));
       const toImport = importData.filter(b => !existingIds.has(b.id));
       let imported = 0;
-      for (const bill of toImport) {
-        try { await saveBill(bill); imported++; }
-        catch (e) { console.error("Import error:", bill.vendor, e); }
-      }
+      for (const bill of toImport) { try { await saveBill(bill); imported++; } catch(e) { console.error(e); } }
       bills = await loadBills();
       overlay.remove();
       showToast(`Imported ${imported} bills. ${importData.length - toImport.length} duplicates skipped.`);
@@ -370,8 +451,9 @@
               ${needsAttentionCount > 0 ? `<span class="badge badge-red">⚠ ${needsAttentionCount} incomplete</span>` : ""}
               ${needsChangeCount > 0 ? `<span class="badge badge-amber">↺ ${needsChangeCount} to change</span>` : ""}
               <span class="stat-pill">${bills.length} total bills</span>
-              <button class="export-btn" onclick="handleExport()">⬇ Export</button>
-              <button class="import-btn" onclick="showImportModal()">⬆ Import</button>
+              <button class="hdr-btn hdr-btn-blue" onclick="showPdfExportModal()">📄 PDF Export</button>
+              <button class="hdr-btn" onclick="handleExport()">⬇ Export</button>
+              <button class="hdr-btn hdr-btn-green" onclick="showImportModal()">⬆ Import</button>
             </div>
           </div>
         </header>
@@ -519,35 +601,30 @@
             </div>
             <div class="form-actions">
               ${isEdit?`<button class="delete-btn" onclick="handleDelete('${f.id}')">Delete Bill</button>`:""}
-              <button class="save-btn" onclick="handleSave('${f.id}','${isEdit}')"> ${isEdit?"Save Changes":"Add Bill"}</button>
+              <button class="save-btn" onclick="handleSave('${f.id}','${isEdit}')">${isEdit?"Save Changes":"Add Bill"}</button>
             </div>
           </div>
         </main>`;
     }
   }
 
-  // ── Form helpers ──────────────────────────────────────────────────────
   function onMethodChange() {
     const method = document.getElementById("f-currentMethod").value;
     const group = document.getElementById("account-group");
     document.getElementById("account-label").textContent = method === "Credit Card" ? "Card Used" : "Account Used";
     group.querySelector(".form-input")?.remove();
     if (method === "Credit Card") {
-      const sel = document.createElement("select");
-      sel.className = "form-input"; sel.id = "f-accountUsed";
+      const sel = document.createElement("select"); sel.className = "form-input"; sel.id = "f-accountUsed";
       sel.innerHTML = `<option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}`;
       group.appendChild(sel);
     } else {
-      const inp = document.createElement("input");
-      inp.className = "form-input"; inp.id = "f-accountUsed";
-      inp.placeholder = "e.g. TD Checking ···1234";
+      const inp = document.createElement("input"); inp.className = "form-input"; inp.id = "f-accountUsed"; inp.placeholder = "e.g. TD Checking ···1234";
       group.appendChild(inp);
     }
   }
 
   function onWantToChangeToggle() {
-    document.getElementById("change-fields").style.display =
-      document.getElementById("f-wantToChange").checked ? "block" : "none";
+    document.getElementById("change-fields").style.display = document.getElementById("f-wantToChange").checked ? "block" : "none";
   }
 
   function onChangeToMethodChange() {
@@ -556,9 +633,7 @@
     document.getElementById("extra-date-group")?.remove();
     if (method === "Credit Card") {
       group.innerHTML = `<label class="form-label">New Card</label><select class="form-input" id="f-changeToCard"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}</select>`;
-      const d = document.createElement("div");
-      d.id = "extra-date-group"; d.className = "form-group";
-      d.style.cssText = "margin-top:16px;max-width:calc(50% - 14px)";
+      const d = document.createElement("div"); d.id = "extra-date-group"; d.className = "form-group"; d.style.cssText = "margin-top:16px;max-width:calc(50% - 14px)";
       d.innerHTML = `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" />`;
       document.getElementById("change-fields").appendChild(d);
     } else {
@@ -576,54 +651,27 @@
   async function handleSave(id, isEditStr) {
     const vendor = getVal("f-vendor").trim();
     if (!vendor) { showToast("Please enter at least a Vendor / Biller name.", "error"); return; }
-    const bill = {
-      id, vendor,
-      property: getVal("f-property"),
-      description: getVal("f-description"),
-      currentMethod: getVal("f-currentMethod"),
-      accountUsed: getVal("f-accountUsed"),
-      wantToChange: getVal("f-wantToChange"),
-      changeToMethod: getVal("f-changeToMethod"),
-      changeToCard: getVal("f-changeToCard"),
-      dateChanged: getVal("f-dateChanged"),
-      notes: getVal("f-notes"),
-      createdAt: isEditStr==="true" ? (editingBill?.createdAt||new Date().toLocaleDateString()) : new Date().toLocaleDateString()
-    };
+    const bill = { id, vendor, property: getVal("f-property"), description: getVal("f-description"), currentMethod: getVal("f-currentMethod"), accountUsed: getVal("f-accountUsed"), wantToChange: getVal("f-wantToChange"), changeToMethod: getVal("f-changeToMethod"), changeToCard: getVal("f-changeToCard"), dateChanged: getVal("f-dateChanged"), notes: getVal("f-notes"), createdAt: isEditStr==="true" ? (editingBill?.createdAt||new Date().toLocaleDateString()) : new Date().toLocaleDateString() };
     const btn = document.querySelector(".save-btn");
     btn.textContent = "Saving..."; btn.disabled = true;
     try {
       if (isEditStr === "true") { await updateBill(bill); showToast("Bill updated."); }
       else { await saveBill(bill); showToast("Bill added."); }
-      bills = await loadBills();
-      currentView = "dashboard"; editingBill = null;
-      render();
-    } catch(e) {
-      showToast("Save failed. Please try again.", "error");
-      btn.textContent = isEditStr==="true" ? "Save Changes" : "Add Bill";
-      btn.disabled = false;
-    }
+      bills = await loadBills(); currentView = "dashboard"; editingBill = null; render();
+    } catch(e) { showToast("Save failed.", "error"); btn.textContent = isEditStr==="true"?"Save Changes":"Add Bill"; btn.disabled = false; }
   }
 
   async function handleDelete(id) {
     if (!confirm("Delete this bill?")) return;
-    try {
-      await deleteBill(id);
-      bills = await loadBills();
-      currentView = "dashboard"; editingBill = null;
-      showToast("Bill removed."); render();
-    } catch(e) { showToast("Delete failed.", "error"); }
+    try { await deleteBill(id); bills = await loadBills(); currentView = "dashboard"; editingBill = null; showToast("Bill removed."); render(); }
+    catch(e) { showToast("Delete failed.", "error"); }
   }
 
   function openAdd() { editingBill = null; currentView = "add"; render(); }
   function openEdit(id) { editingBill = bills.find(b => b.id === id); currentView = "edit"; render(); }
 
-  // ── Init ──────────────────────────────────────────────────────────────
   (async () => {
-    document.getElementById("app").innerHTML = `
-      <div class="loading">
-        <div class="spinner"></div>
-        <p style="color:#8b7355;margin-top:16px;font-family:'Playfair Display',serif">Loading your bills...</p>
-      </div>`;
+    document.getElementById("app").innerHTML = `<div class="loading"><div class="spinner"></div><p style="color:#8b7355;margin-top:16px;font-family:'Playfair Display',serif">Loading your bills...</p></div>`;
     bills = await loadBills();
     render();
   })();
