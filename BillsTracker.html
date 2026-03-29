@@ -1,671 +1,464 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Property Bills Manager</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f5f0e8; font-family: 'Lato', sans-serif; min-height: 100vh; }
-    input, select, textarea { font-family: 'Lato', sans-serif; }
-    ::placeholder { color: #bbb; }
-    select option { background: #fff; }
-    .bill-row:hover { background: #fdf8f0 !important; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
-    @keyframes spin { to { transform: rotate(360deg); } }
+import { useState, useEffect } from "react";
 
-    /* Header */
-    header { background: #2c1810; }
-    .header-inner { max-width: 1100px; margin: 0 auto; padding: 28px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    h1.title { font-family: 'Playfair Display', serif; font-size: 32px; color: #f5e6d0; font-weight: 700; letter-spacing: -0.5px; }
-    p.subtitle { font-size: 13px; color: #8b7355; margin-top: 2px; letter-spacing: 2px; text-transform: uppercase; }
-    .header-stats { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .badge { color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; }
-    .badge-red { background: #c0392b; }
-    .badge-amber { background: #b07d2a; }
-    .stat-pill { background: rgba(255,255,255,0.08); color: #c4a882; padding: 6px 14px; border-radius: 20px; font-size: 13px; }
-    .export-btn { background: transparent; border: 1.5px solid #c4a882; color: #c4a882; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
-    .export-btn:hover { background: rgba(196,168,130,0.1); }
+const PROPERTIES = ["Allison", "Karmel", "Prospect", "Boathouse"];
+const PAYMENT_METHODS = ["Credit Card", "Bank Direct Withdrawal (ACH)", "Bank Bill Pay", "Check by Mail"];
+const CREDIT_CARDS = ["Capital One", "Citi", "Discover"];
+const STORAGE_KEY = "property-bills-data";
 
-    /* Main */
-    main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; animation: fadeIn 0.3s ease; }
+const emptyBill = {
+  id: null, property: "", vendor: "", description: "",
+  currentMethod: "", accountUsed: "", wantToChange: false,
+  changeToMethod: "", changeToCard: "", dateChanged: "", notes: "", createdAt: "",
+};
 
-    /* Controls */
-    .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
-    .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .filter-label { font-size: 13px; color: #8b7355; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-    select.filter-select { background: #fff; border: 1.5px solid #d4c4a8; border-radius: 8px; padding: 8px 12px; font-size: 14px; color: #2c1810; cursor: pointer; outline: none; }
-    .add-btn { background: #2c1810; color: #f5e6d0; border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; font-family: 'Lato', sans-serif; }
-    .add-btn:hover { background: #3d261a; }
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
 
-    /* Property cards */
-    .prop-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 28px; }
-    .prop-card { background: #fff; border: 1.5px solid #e8dfd0; border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-    .prop-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-    .prop-card-name { font-family: 'Playfair Display', serif; font-size: 16px; color: #2c1810; font-weight: 600; }
-    .prop-card-count { font-size: 32px; font-weight: 700; color: #8b4513; font-family: 'Playfair Display', serif; line-height: 1.1; margin-top: 4px; }
-    .prop-card-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1.5px; }
-    .prop-card-alert { margin-top: 8px; font-size: 11px; color: #c0392b; font-weight: 700; }
-    .prop-card-amber { color: #b07d2a !important; }
+async function loadBills() {
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    return result ? JSON.parse(result.value) : [];
+  } catch { return []; }
+}
 
-    /* Table */
-    .table-wrap { background: #fff; border-radius: 16px; border: 1.5px solid #e8dfd0; overflow: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
-    table { width: 100%; border-collapse: collapse; min-width: 720px; }
-    th { background: #2c1810; color: #c4a882; padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; white-space: nowrap; }
-    tr.bill-row { border-bottom: 1px solid #f0e8dc; transition: background 0.15s; }
-    td { padding: 14px 16px; font-size: 14px; color: #444; vertical-align: middle; }
-    .prop-tag { color: #fff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .method-tag { background: #f5f0e8; color: #6b4c2a; padding: 3px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-    .edit-btn { background: transparent; border: 1.5px solid #8b4513; color: #8b4513; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
-    .edit-btn:hover { background: #8b4513; color: #fff; }
+async function saveBills(bills) {
+  try { await window.storage.set(STORAGE_KEY, JSON.stringify(bills)); }
+  catch (e) { console.error("Save failed", e); }
+}
 
-    /* Empty state */
-    .empty { text-align: center; padding: 80px 20px; background: #fff; border-radius: 16px; border: 1.5px dashed #d4c4a8; }
+export default function App() {
+  const [bills, setBills] = useState([]);
+  const [view, setView] = useState("dashboard");
+  const [form, setForm] = useState({ ...emptyBill });
+  const [editId, setEditId] = useState(null);
+  const [filterProperty, setFilterProperty] = useState("All");
+  const [filterChange, setFilterChange] = useState("All");
+  const [loaded, setLoaded] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-    /* Form */
-    .form-card { background: #fff; border-radius: 16px; border: 1.5px solid #e8dfd0; padding: 36px; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06); animation: fadeIn 0.3s ease; }
-    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
-    .form-title { font-family: 'Playfair Display', serif; font-size: 26px; color: #2c1810; font-weight: 700; }
-    .back-btn { background: transparent; border: none; color: #8b7355; cursor: pointer; font-size: 14px; font-family: 'Lato', sans-serif; font-weight: 700; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 28px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label { font-size: 12px; font-weight: 700; color: #8b7355; text-transform: uppercase; letter-spacing: 1px; }
-    .form-input { border: 1.5px solid #d4c4a8; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #2c1810; outline: none; background: #fdfaf6; font-family: 'Lato', sans-serif; }
-    .form-input:focus { border-color: #8b4513; }
-    .change-section { margin-top: 28px; background: #fdf8f0; border: 1.5px solid #e8dfd0; border-radius: 12px; padding: 20px 24px; }
-    .change-section-header { font-family: 'Playfair Display', serif; font-size: 16px; color: #2c1810; font-weight: 600; margin-bottom: 14px; }
-    .check-row { display: flex; align-items: center; gap: 10px; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #f0e8dc; }
-    .delete-btn { background: transparent; border: 1.5px solid #c0392b; color: #c0392b; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
-    .save-btn { background: #2c1810; color: #f5e6d0; border: none; border-radius: 8px; padding: 10px 28px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Lato', sans-serif; }
-    .save-btn:hover { background: #3d261a; }
+  useEffect(() => {
+    loadBills().then((data) => { setBills(data); setLoaded(true); });
+  }, []);
 
-    /* Toast */
-    .toast { position: fixed; top: 20px; right: 20px; color: #fff; padding: 12px 20px; border-radius: 8px; font-family: 'Lato', sans-serif; font-weight: 700; font-size: 14px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.2); animation: fadeIn 0.2s ease; }
-
-    /* Loading */
-    .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-    .spinner { width: 32px; height: 32px; border: 3px solid #ddd; border-top: 3px solid #8b4513; border-radius: 50%; animation: spin 0.8s linear infinite; }
-
-    /* Import modal */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal { background: #fff; border-radius: 16px; padding: 36px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-    .modal h2 { font-family: 'Playfair Display', serif; font-size: 22px; color: #2c1810; margin-bottom: 12px; }
-    .modal p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
-    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
-    .file-drop { border: 2px dashed #d4c4a8; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .file-drop:hover { border-color: #8b4513; background: #fdf8f0; }
-    .file-drop input { display: none; }
-
-    @media (max-width: 600px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .header-inner { flex-direction: column; align-items: flex-start; }
-    }
-  </style>
-</head>
-<body>
-
-<div id="toast-container"></div>
-<div id="app"></div>
-
-<script>
-  const SUPABASE_URL = "https://viprflxaudxjwsvytrnn.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpcHJmbHhhdWR4andzdnl0cm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Nzc0NjcsImV4cCI6MjA5MDE1MzQ2N30.GCaasqLjpBvcARUO7poDTKH_bvQfasbAX9yLKOeKGK0";
-  const TABLE = "property_bills";
-  const PROPERTIES = ["Allison", "Karmel", "Prospect", "Boathouse"];
-  const PAYMENT_METHODS = ["Credit Card", "Bank Direct Withdrawal (ACH)", "Bank Bill Pay", "Check by Mail"];
-  const CREDIT_CARDS = ["Capital One", "Citi", "Discover"];
-
-  const PROP_COLORS = { Allison: "#4a7c59", Karmel: "#7c4a4a", Prospect: "#4a5d7c", Boathouse: "#7c6b4a" };
-
-  let bills = [];
-  let currentView = "dashboard"; // dashboard | add | edit
-  let editingBill = null;
-  let filterProperty = "All";
-  let filterStatus = "All";
-
-  // ── Supabase helpers ──────────────────────────────────────────────────
-  async function sbFetch(path, options = {}) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": options.prefer || "return=representation",
-        ...options.headers
-      },
-      ...options
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err);
-    }
-    const text = await res.text();
-    return text ? JSON.parse(text) : [];
-  }
-
-  async function loadBills() {
-    try {
-      const data = await sbFetch(`${TABLE}?order=created_at.asc`, { method: "GET" });
-      // Map snake_case from DB to camelCase for app
-      return data.map(dbToApp);
-    } catch (e) {
-      console.error("Load error:", e);
-      showToast("Could not load bills. Check Supabase connection.", "error");
-      return [];
-    }
-  }
-
-  async function saveBill(bill) {
-    const row = appToDb(bill);
-    try {
-      await sbFetch(`${TABLE}`, {
-        method: "POST",
-        prefer: "return=minimal",
-        body: JSON.stringify(row)
-      });
-    } catch (e) {
-      console.error("Save error:", e);
-      showToast("Could not save bill.", "error");
-    }
-  }
-
-  async function updateBill(bill) {
-    const row = appToDb(bill);
-    try {
-      await sbFetch(`${TABLE}?id=eq.${bill.id}`, {
-        method: "PATCH",
-        prefer: "return=minimal",
-        body: JSON.stringify(row)
-      });
-    } catch (e) {
-      console.error("Update error:", e);
-      showToast("Could not update bill.", "error");
-    }
-  }
-
-  async function deleteBill(id) {
-    try {
-      await sbFetch(`${TABLE}?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
-    } catch (e) {
-      console.error("Delete error:", e);
-      showToast("Could not delete bill.", "error");
-    }
-  }
-
-  // camelCase <-> snake_case mapping
-  function appToDb(b) {
-    return {
-      id: b.id,
-      property: b.property || null,
-      vendor: b.vendor,
-      description: b.description || null,
-      current_method: b.currentMethod || null,
-      account_used: b.accountUsed || null,
-      want_to_change: b.wantToChange || false,
-      change_to_method: b.changeToMethod || null,
-      change_to_card: b.changeToCard || null,
-      date_changed: b.dateChanged || null,
-      notes: b.notes || null,
-      created_at: b.createdAt || new Date().toLocaleDateString()
-    };
-  }
-
-  function dbToApp(r) {
-    return {
-      id: r.id,
-      property: r.property || "",
-      vendor: r.vendor || "",
-      description: r.description || "",
-      currentMethod: r.current_method || "",
-      accountUsed: r.account_used || "",
-      wantToChange: r.want_to_change || false,
-      changeToMethod: r.change_to_method || "",
-      changeToCard: r.change_to_card || "",
-      dateChanged: r.date_changed || "",
-      notes: r.notes || "",
-      createdAt: r.created_at || ""
-    };
-  }
-
-  function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
-  }
-
-  // ── Toast ─────────────────────────────────────────────────────────────
   function showToast(msg, type = "success") {
-    const t = document.createElement("div");
-    t.className = "toast";
-    t.style.background = type === "error" ? "#c0392b" : "#3d6b4f";
-    t.textContent = msg;
-    document.getElementById("toast-container").appendChild(t);
-    setTimeout(() => t.remove(), 2800);
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2800);
   }
 
-  // ── Computed ──────────────────────────────────────────────────────────
+  function openAdd() {
+    setForm({ ...emptyBill, createdAt: new Date().toLocaleDateString() });
+    setEditId(null);
+    setView("add");
+  }
+
+  function openEdit(bill) {
+    setForm({ ...bill });
+    setEditId(bill.id);
+    setView("edit");
+  }
+
   function billNeedsAttention(b) {
     return !b.property || !b.currentMethod;
   }
 
-  function getFiltered() {
-    return bills.filter(b => {
-      const propMatch = filterProperty === "All" || b.property === filterProperty;
-      const statusMatch =
-        filterStatus === "All" ||
-        (filterStatus === "Needs Attention" && billNeedsAttention(b)) ||
-        (filterStatus === "Needs Change" && b.wantToChange && !b.dateChanged) ||
-        (filterStatus === "Changed" && b.wantToChange && b.dateChanged) ||
-        (filterStatus === "No Change" && !b.wantToChange && !billNeedsAttention(b));
-      return propMatch && statusMatch;
+  async function handleSave() {
+    if (!form.vendor) { showToast("Please enter at least a Vendor / Biller name.", "error"); return; }
+    let updated;
+    if (editId) {
+      updated = bills.map((b) => (b.id === editId ? { ...form, id: editId } : b));
+      showToast("Bill updated.");
+    } else {
+      const newBill = { ...form, id: generateId(), createdAt: new Date().toLocaleDateString() };
+      updated = [...bills, newBill];
+      showToast("Bill added.");
+    }
+    setBills(updated);
+    await saveBills(updated);
+    setView("dashboard");
+  }
+
+  async function handleDelete(id) {
+    const updated = bills.filter((b) => b.id !== id);
+    setBills(updated);
+    await saveBills(updated);
+    setView("dashboard");
+    showToast("Bill removed.");
+  }
+
+  function field(key, value) {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "currentMethod" && value !== "Credit Card") next.accountUsed = "";
+      if (key === "changeToMethod" && value !== "Credit Card") next.changeToCard = "";
+      return next;
     });
   }
+
+  function handleCopy() {
+    const json = JSON.stringify(bills, null, 2);
+    navigator.clipboard.writeText(json).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  const exportJson = JSON.stringify(bills, null, 2);
+
+  const filtered = bills.filter((b) => {
+    const propMatch = filterProperty === "All" || b.property === filterProperty;
+    const changeMatch =
+      filterChange === "All" ||
+      (filterChange === "Needs Attention" && billNeedsAttention(b)) ||
+      (filterChange === "Needs Change" && b.wantToChange && !b.dateChanged) ||
+      (filterChange === "Changed" && b.wantToChange && b.dateChanged) ||
+      (filterChange === "No Change" && !b.wantToChange && !billNeedsAttention(b));
+    return propMatch && changeMatch;
+  });
+
+  const needsAttentionCount = bills.filter(billNeedsAttention).length;
+  const needsChangeCount = bills.filter((b) => b.wantToChange && !b.dateChanged).length;
 
   function changeToLabel(b) {
     if (b.changeToMethod === "Credit Card" && b.changeToCard) return `CC · ${b.changeToCard}`;
     return b.changeToMethod || "—";
   }
 
-  // ── Export ────────────────────────────────────────────────────────────
-  function handleExport() {
-    if (!bills.length) { showToast("No bills to export.", "error"); return; }
-    const json = JSON.stringify(bills, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "property-bills-export.json";
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast(`Exported ${bills.length} bills.`);
-  }
-
-  // ── Import ────────────────────────────────────────────────────────────
-  function showImportModal() {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay";
-    overlay.innerHTML = `
-      <div class="modal">
-        <h2>Import Bills</h2>
-        <p>Select your <strong>property-bills-export.json</strong> file exported from the Claude app. All bills in the file will be imported into Supabase. Duplicates (same ID) will be skipped.</p>
-        <div class="file-drop" id="file-drop-zone">
-          <input type="file" id="import-file" accept=".json" />
-          <div style="font-size:36px;margin-bottom:8px;">📂</div>
-          <div style="color:#8b7355;font-weight:700;">Click to select JSON file</div>
-          <div style="color:#aaa;font-size:13px;margin-top:4px;">property-bills-export.json</div>
-        </div>
-        <div id="import-status" style="margin-top:12px;font-size:13px;color:#555;min-height:20px;"></div>
-        <div class="modal-actions">
-          <button class="delete-btn" id="import-cancel">Cancel</button>
-          <button class="save-btn" id="import-confirm" disabled>Import</button>
-        </div>
+  if (!loaded) {
+    return (
+      <div style={styles.loading}>
+        <div style={styles.spinner} />
+        <p style={{ color: "#8b7355", marginTop: 16, fontFamily: "'Playfair Display', serif" }}>Loading your bills...</p>
       </div>
-    `;
-    document.body.appendChild(overlay);
-
-    let importData = null;
-
-    document.getElementById("file-drop-zone").onclick = () => document.getElementById("import-file").click();
-    document.getElementById("import-file").onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          importData = JSON.parse(ev.target.result);
-          if (!Array.isArray(importData)) throw new Error("Invalid format");
-          document.getElementById("import-status").textContent = `✓ Found ${importData.length} bills ready to import.`;
-          document.getElementById("import-status").style.color = "#3d6b4f";
-          document.getElementById("import-confirm").disabled = false;
-        } catch {
-          document.getElementById("import-status").textContent = "✗ Invalid file format.";
-          document.getElementById("import-status").style.color = "#c0392b";
-        }
-      };
-      reader.readAsText(file);
-    };
-
-    document.getElementById("import-cancel").onclick = () => overlay.remove();
-
-    document.getElementById("import-confirm").onclick = async () => {
-      if (!importData) return;
-      document.getElementById("import-confirm").textContent = "Importing...";
-      document.getElementById("import-confirm").disabled = true;
-
-      const existingIds = new Set(bills.map(b => b.id));
-      const toImport = importData.filter(b => !existingIds.has(b.id));
-      let imported = 0;
-
-      for (const bill of toImport) {
-        try {
-          await saveBill(bill);
-          imported++;
-        } catch (e) {
-          console.error("Import error for bill:", bill.vendor, e);
-        }
-      }
-
-      bills = await loadBills();
-      overlay.remove();
-      showToast(`Imported ${imported} bills. ${importData.length - toImport.length} duplicates skipped.`);
-      render();
-    };
+    );
   }
 
-  // ── Render ────────────────────────────────────────────────────────────
-  function render() {
-    const app = document.getElementById("app");
+  return (
+    <div style={styles.root}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #f5f0e8; }
+        input, select, textarea { font-family: 'Lato', sans-serif; }
+        ::placeholder { color: #bbb; }
+        select option { background: #fff; }
+        .bill-row:hover { background: #fdf8f0 !important; }
+        .btn-icon:hover { opacity: 0.75; }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
 
-    const needsAttentionCount = bills.filter(billNeedsAttention).length;
-    const needsChangeCount = bills.filter(b => b.wantToChange && !b.dateChanged).length;
-    const filtered = getFiltered();
+      {toast && (
+        <div style={{ ...styles.toast, background: toast.type === "error" ? "#c0392b" : "#3d6b4f" }}>
+          {toast.msg}
+        </div>
+      )}
 
-    if (currentView === "dashboard") {
-      app.innerHTML = `
-        <header>
-          <div class="header-inner">
-            <div>
-              <h1 class="title">Property Bills</h1>
-              <p class="subtitle">Payment Manager · 4 Properties</p>
-            </div>
-            <div class="header-stats">
-              ${needsAttentionCount > 0 ? `<span class="badge badge-red">⚠ ${needsAttentionCount} incomplete</span>` : ""}
-              ${needsChangeCount > 0 ? `<span class="badge badge-amber">↺ ${needsChangeCount} to change</span>` : ""}
-              <span class="stat-pill">${bills.length} total bills</span>
-              <button class="export-btn" onclick="handleExport()">⬇ Export</button>
-              <button class="export-btn" onclick="showImportModal()" style="border-color:#4a7c59;color:#4a7c59;">⬆ Import</button>
+      {/* Export Modal */}
+      {showExportModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2 style={styles.modalTitle}>Export Your Data</h2>
+            <p style={styles.modalText}>
+              Follow these steps to save your data as a file:
+            </p>
+            <ol style={styles.stepList}>
+              <li>Click <strong>Copy to Clipboard</strong> below</li>
+              <li>Open <strong>Notepad</strong> (search for it in Windows Start menu)</li>
+              <li>Press <strong>Ctrl+V</strong> to paste</li>
+              <li>Click <strong>File → Save As</strong></li>
+              <li>Name it <strong>property-bills-export.json</strong></li>
+              <li>Change "Save as type" to <strong>All Files (*.*)</strong></li>
+              <li>Save to your Desktop or Downloads folder</li>
+            </ol>
+            <textarea
+              style={styles.exportTextarea}
+              readOnly
+              value={exportJson}
+              onClick={(e) => e.target.select()}
+            />
+            <div style={styles.modalActions}>
+              <button style={styles.cancelBtn2} onClick={() => { setShowExportModal(false); setCopied(false); }}>
+                Close
+              </button>
+              <button style={{ ...styles.copyBtn, background: copied ? "#3d6b4f" : "#2c1810" }} onClick={handleCopy}>
+                {copied ? "✓ Copied!" : "Copy to Clipboard"}
+              </button>
             </div>
           </div>
-        </header>
-        <main>
-          <div class="controls">
-            <div class="filters">
-              <span class="filter-label">Property</span>
-              <select class="filter-select" onchange="filterProperty=this.value;render()">
-                ${["All",...PROPERTIES].map(p=>`<option ${filterProperty===p?"selected":""}>${p}</option>`).join("")}
-              </select>
-              <span class="filter-label">Status</span>
-              <select class="filter-select" onchange="filterStatus=this.value;render()">
-                ${["All","Needs Attention","Needs Change","Changed","No Change"].map(s=>`<option ${filterStatus===s?"selected":""}>${s}</option>`).join("")}
-              </select>
-            </div>
-            <button class="add-btn" onclick="openAdd()">+ Add Bill</button>
-          </div>
+        </div>
+      )}
 
-          <div class="prop-cards">
-            ${PROPERTIES.map(p => {
-              const count = bills.filter(b => b.property === p).length;
-              const inc = bills.filter(b => b.property === p && billNeedsAttention(b)).length;
-              const chg = bills.filter(b => b.property === p && b.wantToChange && !b.dateChanged).length;
-              return `
-                <div class="prop-card" onclick="filterProperty='${p}';filterStatus='All';render()">
-                  <div class="prop-card-name">${p}</div>
-                  <div class="prop-card-count">${count}</div>
-                  <div class="prop-card-label">bills</div>
-                  ${inc > 0 ? `<div class="prop-card-alert">⚠ ${inc} incomplete</div>` : ""}
-                  ${chg > 0 ? `<div class="prop-card-alert prop-card-amber">↺ ${chg} to change</div>` : ""}
-                </div>`;
-            }).join("")}
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <div>
+            <h1 style={styles.title}>Property Bills</h1>
+            <p style={styles.subtitle}>Payment Manager · 4 Properties</p>
           </div>
+          <div style={styles.headerStats}>
+            {needsAttentionCount > 0 && <div style={styles.alertBadge}>⚠ {needsAttentionCount} incomplete</div>}
+            {needsChangeCount > 0 && <div style={{ ...styles.alertBadge, background: "#b07d2a" }}>↺ {needsChangeCount} to change</div>}
+            <div style={styles.statPill}>{bills.length} total bills</div>
+            <button style={styles.exportBtn} onClick={() => { if (bills.length === 0) { showToast("No bills to export yet.", "error"); return; } setShowExportModal(true); }}>
+              ⬇ Export Data
+            </button>
+          </div>
+        </div>
+      </header>
 
-          ${filtered.length === 0 ? `
-            <div class="empty">
-              <div style="font-size:48px">🏠</div>
-              <p style="margin-top:12px;color:#8b7355;font-family:'Playfair Display',serif;font-size:18px">No bills yet</p>
-              <p style="color:#aaa;margin-top:6px;font-size:14px">Click "+ Add Bill" to get started</p>
+      <main style={styles.main}>
+        {view === "dashboard" && (
+          <div style={{ animation: "fadeIn 0.3s ease" }}>
+            <div style={styles.controls}>
+              <div style={styles.filters}>
+                <label style={styles.filterLabel}>Property</label>
+                <select style={styles.select} value={filterProperty} onChange={(e) => setFilterProperty(e.target.value)}>
+                  <option>All</option>
+                  {PROPERTIES.map((p) => <option key={p}>{p}</option>)}
+                </select>
+                <label style={styles.filterLabel}>Status</label>
+                <select style={styles.select} value={filterChange} onChange={(e) => setFilterChange(e.target.value)}>
+                  <option>All</option>
+                  <option>Needs Attention</option>
+                  <option>Needs Change</option>
+                  <option>Changed</option>
+                  <option>No Change</option>
+                </select>
+              </div>
+              <button style={styles.addBtn} onClick={openAdd}>+ Add Bill</button>
             </div>
-          ` : `
-            <div class="table-wrap">
-              <table>
-                <thead><tr>${["Property","Vendor","Current Method","Account / Card","Status","Changed To","Date Changed","Actions"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
-                <tbody>
-                  ${filtered.map(b => `
-                    <tr class="bill-row">
-                      <td><span class="prop-tag" style="background:${PROP_COLORS[b.property]||'#888'}">${b.property||"—"}</span></td>
-                      <td style="font-weight:600;color:#2c1810">${b.vendor}</td>
-                      <td>${b.currentMethod ? `<span class="method-tag">${b.currentMethod}</span>` : `<span style="color:#ccc">—</span>`}</td>
-                      <td style="color:#555;font-size:13px">${b.accountUsed||"—"}</td>
-                      <td>${billNeedsAttention(b)
-                        ? `<span style="color:#8b4513;font-weight:700;font-size:13px">⚠ Incomplete</span>`
-                        : b.wantToChange
-                          ? `<span style="color:${b.dateChanged?"#3d6b4f":"#c0392b"};font-weight:700;font-size:13px">${b.dateChanged?"✓ Done":"↺ Change"}</span>`
-                          : `<span style="color:#aaa;font-size:13px">✓ OK</span>`
-                      }</td>
-                      <td style="font-size:13px;color:#555">${changeToLabel(b)}</td>
-                      <td style="font-size:13px;color:#555">${b.dateChanged||"—"}</td>
-                      <td><button class="edit-btn" onclick="openEdit('${b.id}')">Edit</button></td>
+
+            <div style={styles.propCards}>
+              {PROPERTIES.map((p) => {
+                const count = bills.filter((b) => b.property === p).length;
+                const pending = bills.filter((b) => b.property === p && b.wantToChange && !b.dateChanged).length;
+                const incomplete = bills.filter((b) => b.property === p && billNeedsAttention(b)).length;
+                return (
+                  <div key={p} style={styles.propCard} onClick={() => { setFilterProperty(p); setFilterChange("All"); }}>
+                    <div style={styles.propCardName}>{p}</div>
+                    <div style={styles.propCardCount}>{count}</div>
+                    <div style={styles.propCardLabel}>bills</div>
+                    {incomplete > 0 && <div style={styles.propCardAlert}>⚠ {incomplete} incomplete</div>}
+                    {pending > 0 && <div style={{ ...styles.propCardAlert, color: "#b07d2a" }}>↺ {pending} to change</div>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {filtered.length === 0 ? (
+              <div style={styles.empty}>
+                <div style={{ fontSize: 48 }}>🏠</div>
+                <p style={{ marginTop: 12, color: "#8b7355", fontFamily: "'Playfair Display', serif", fontSize: 18 }}>No bills yet</p>
+                <p style={{ color: "#aaa", marginTop: 6, fontFamily: "'Lato', sans-serif", fontSize: 14 }}>Click "+ Add Bill" to get started</p>
+              </div>
+            ) : (
+              <div style={styles.tableWrap}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      {["Property", "Vendor", "Current Method", "Account / Card", "Status", "Changed To", "Date Changed", "Actions"].map((h) => (
+                        <th key={h} style={styles.th}>{h}</th>
+                      ))}
                     </tr>
-                  `).join("")}
-                </tbody>
-              </table>
-            </div>
-          `}
-        </main>
-      `;
-    } else {
-      // Add / Edit form
-      const isEdit = currentView === "edit";
-      const f = editingBill || { id: generateId(), property: "", vendor: "", description: "", currentMethod: "", accountUsed: "", wantToChange: false, changeToMethod: "", changeToCard: "", dateChanged: "", notes: "", createdAt: new Date().toLocaleDateString() };
-
-      app.innerHTML = `
-        <header>
-          <div class="header-inner">
-            <div>
-              <h1 class="title">Property Bills</h1>
-              <p class="subtitle">Payment Manager · 4 Properties</p>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filtered.map((b) => (
+                      <tr key={b.id} className="bill-row" style={styles.tr}>
+                        <td style={styles.td}><span style={{ ...styles.propTag, background: propColor(b.property) }}>{b.property || "—"}</span></td>
+                        <td style={{ ...styles.td, fontWeight: 600, color: "#2c1810" }}>{b.vendor}</td>
+                        <td style={styles.td}>{b.currentMethod ? <span style={styles.methodTag}>{b.currentMethod}</span> : <span style={{ color: "#ccc" }}>—</span>}</td>
+                        <td style={{ ...styles.td, color: "#555", fontSize: 13 }}>{b.accountUsed || "—"}</td>
+                        <td style={styles.td}>
+                          {billNeedsAttention(b)
+                            ? <span style={{ color: "#8b4513", fontWeight: 700, fontSize: 13 }}>⚠ Incomplete</span>
+                            : b.wantToChange
+                              ? <span style={{ color: b.dateChanged ? "#3d6b4f" : "#c0392b", fontWeight: 700, fontSize: 13 }}>{b.dateChanged ? "✓ Done" : "↺ Change"}</span>
+                              : <span style={{ color: "#aaa", fontSize: 13 }}>✓ OK</span>}
+                        </td>
+                        <td style={{ ...styles.td, fontSize: 13, color: "#555" }}>{changeToLabel(b)}</td>
+                        <td style={{ ...styles.td, fontSize: 13, color: "#555" }}>{b.dateChanged || "—"}</td>
+                        <td style={styles.td}>
+                          <button className="btn-icon" style={styles.editBtn} onClick={() => openEdit(b)}>Edit</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </header>
-        <main>
-          <div class="form-card">
-            <div class="form-header">
-              <h2 class="form-title">${isEdit ? "Edit Bill" : "Add New Bill"}</h2>
-              <button class="back-btn" onclick="currentView='dashboard';render()">← Back</button>
-            </div>
+        )}
 
-            <div class="form-grid">
-              <div class="form-group">
-                <label class="form-label">Property</label>
-                <select class="form-input" id="f-property">
-                  <option value="">Select property...</option>
-                  ${PROPERTIES.map(p=>`<option ${f.property===p?"selected":""}>${p}</option>`).join("")}
-                </select>
+        {(view === "add" || view === "edit") && (
+          <div style={{ animation: "fadeIn 0.3s ease" }}>
+            <div style={styles.formCard}>
+              <div style={styles.formHeader}>
+                <h2 style={styles.formTitle}>{view === "add" ? "Add New Bill" : "Edit Bill"}</h2>
+                <button style={styles.cancelBtn} onClick={() => setView("dashboard")}>← Back</button>
               </div>
-              <div class="form-group">
-                <label class="form-label">Vendor / Biller <span style="color:#c0392b">*</span></label>
-                <input class="form-input" id="f-vendor" placeholder="e.g. PECO, Comcast, Water Authority" value="${f.vendor}" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Description</label>
-                <input class="form-input" id="f-description" placeholder="e.g. Electric, Internet, Mortgage" value="${f.description}" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Current Payment Method</label>
-                <select class="form-input" id="f-currentMethod" onchange="onMethodChange()">
-                  <option value="">Select method...</option>
-                  ${PAYMENT_METHODS.map(m=>`<option ${f.currentMethod===m?"selected":""}>${m}</option>`).join("")}
-                </select>
-              </div>
-              <div class="form-group" id="account-group">
-                <label class="form-label" id="account-label">${f.currentMethod==="Credit Card"?"Card Used":"Account Used"}</label>
-                ${f.currentMethod === "Credit Card"
-                  ? `<select class="form-input" id="f-accountUsed"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option ${f.accountUsed===c?"selected":""}>${c}</option>`).join("")}</select>`
-                  : `<input class="form-input" id="f-accountUsed" placeholder="e.g. TD Checking ···1234" value="${f.accountUsed}" />`
-                }
-              </div>
-              <div class="form-group">
-                <label class="form-label">Notes</label>
-                <input class="form-input" id="f-notes" placeholder="Anything else to remember" value="${f.notes}" />
-              </div>
-            </div>
-
-            <div class="change-section">
-              <div class="change-section-header">Payment Change</div>
-              <div class="check-row">
-                <input type="checkbox" id="f-wantToChange" ${f.wantToChange?"checked":""} onchange="onWantToChangeToggle()" style="width:18px;height:18px;accent-color:#8b4513;cursor:pointer" />
-                <label for="f-wantToChange" class="form-label" style="margin-bottom:0;cursor:pointer">I want to change how this bill is paid</label>
-              </div>
-              <div id="change-fields" style="display:${f.wantToChange?"block":"none"};margin-top:16px">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label class="form-label">Change To</label>
-                    <select class="form-input" id="f-changeToMethod" onchange="onChangeToMethodChange()">
-                      <option value="">Select new method...</option>
-                      ${PAYMENT_METHODS.map(m=>`<option ${f.changeToMethod===m?"selected":""}>${m}</option>`).join("")}
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Property</label>
+                  <select style={styles.input} value={form.property} onChange={(e) => field("property", e.target.value)}>
+                    <option value="">Select property...</option>
+                    {PROPERTIES.map((p) => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Vendor / Biller <span style={{ color: "#c0392b" }}>*</span></label>
+                  <input style={styles.input} placeholder="e.g. PECO, Comcast, Water Authority" value={form.vendor} onChange={(e) => field("vendor", e.target.value)} />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Description</label>
+                  <input style={styles.input} placeholder="e.g. Electric, Internet, Mortgage" value={form.description} onChange={(e) => field("description", e.target.value)} />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Current Payment Method</label>
+                  <select style={styles.input} value={form.currentMethod} onChange={(e) => field("currentMethod", e.target.value)}>
+                    <option value="">Select method...</option>
+                    {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                {form.currentMethod === "Credit Card" ? (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Card Used</label>
+                    <select style={styles.input} value={form.accountUsed} onChange={(e) => field("accountUsed", e.target.value)}>
+                      <option value="">Select card...</option>
+                      {CREDIT_CARDS.map((c) => <option key={c}>{c}</option>)}
                     </select>
                   </div>
-                  <div class="form-group" id="changeto-card-group" style="display:${f.changeToMethod==="Credit Card"?"flex":"flex"};flex-direction:column;gap:6px">
-                    ${f.changeToMethod === "Credit Card"
-                      ? `<label class="form-label">New Card</label><select class="form-input" id="f-changeToCard"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option ${f.changeToCard===c?"selected":""}>${c}</option>`).join("")}</select>`
-                      : `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" value="${f.dateChanged}" />`
-                    }
+                ) : (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Account Used</label>
+                    <input style={styles.input} placeholder="e.g. TD Checking ···1234" value={form.accountUsed} onChange={(e) => field("accountUsed", e.target.value)} />
                   </div>
+                )}
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Notes</label>
+                  <input style={styles.input} placeholder="Anything else to remember" value={form.notes} onChange={(e) => field("notes", e.target.value)} />
                 </div>
-                ${f.changeToMethod === "Credit Card" ? `
-                  <div class="form-group" style="margin-top:16px;max-width:calc(50% - 14px)">
-                    <label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label>
-                    <input type="date" class="form-input" id="f-dateChanged" value="${f.dateChanged}" />
-                  </div>` : ""
-                }
+              </div>
+
+              <div style={styles.changeSection}>
+                <div style={styles.changeSectionHeader}>Payment Change</div>
+                <div style={styles.checkRow}>
+                  <input type="checkbox" id="wantToChange" checked={form.wantToChange}
+                    onChange={(e) => field("wantToChange", e.target.checked)}
+                    style={{ width: 18, height: 18, accentColor: "#8b4513", cursor: "pointer" }} />
+                  <label htmlFor="wantToChange" style={{ ...styles.label, marginBottom: 0, cursor: "pointer" }}>
+                    I want to change how this bill is paid
+                  </label>
+                </div>
+                {form.wantToChange && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={styles.formGrid}>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Change To</label>
+                        <select style={styles.input} value={form.changeToMethod} onChange={(e) => field("changeToMethod", e.target.value)}>
+                          <option value="">Select new method...</option>
+                          {PAYMENT_METHODS.map((m) => <option key={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      {form.changeToMethod === "Credit Card" ? (
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>New Card</label>
+                          <select style={styles.input} value={form.changeToCard} onChange={(e) => field("changeToCard", e.target.value)}>
+                            <option value="">Select card...</option>
+                            {CREDIT_CARDS.map((c) => <option key={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      ) : (
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Date Changed <span style={{ color: "#aaa", fontWeight: 300 }}>(fill in when done)</span></label>
+                          <input type="date" style={styles.input} value={form.dateChanged} onChange={(e) => field("dateChanged", e.target.value)} />
+                        </div>
+                      )}
+                    </div>
+                    {form.changeToMethod === "Credit Card" && (
+                      <div style={{ ...styles.formGroup, marginTop: 16, maxWidth: "calc(50% - 14px)" }}>
+                        <label style={styles.label}>Date Changed <span style={{ color: "#aaa", fontWeight: 300 }}>(fill in when done)</span></label>
+                        <input type="date" style={styles.input} value={form.dateChanged} onChange={(e) => field("dateChanged", e.target.value)} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={styles.formActions}>
+                {editId && <button style={styles.deleteBtn} onClick={() => handleDelete(editId)}>Delete Bill</button>}
+                <button style={styles.saveBtn} onClick={handleSave}>{editId ? "Save Changes" : "Add Bill"}</button>
               </div>
             </div>
-
-            <div class="form-actions">
-              ${isEdit ? `<button class="delete-btn" onclick="handleDelete('${f.id}')">Delete Bill</button>` : ""}
-              <button class="save-btn" onclick="handleSave('${f.id}','${isEdit}')">${isEdit?"Save Changes":"Add Bill"}</button>
-            </div>
           </div>
-        </main>
-      `;
-    }
-  }
+        )}
+      </main>
+    </div>
+  );
+}
 
-  // ── Form helpers ──────────────────────────────────────────────────────
-  function onMethodChange() {
-    const method = document.getElementById("f-currentMethod").value;
-    const group = document.getElementById("account-group");
-    const label = document.getElementById("account-label");
-    if (method === "Credit Card") {
-      label.textContent = "Card Used";
-      group.querySelector(".form-input")?.remove();
-      const sel = document.createElement("select");
-      sel.className = "form-input";
-      sel.id = "f-accountUsed";
-      sel.innerHTML = `<option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}`;
-      group.appendChild(sel);
-    } else {
-      label.textContent = "Account Used";
-      group.querySelector(".form-input")?.remove();
-      const inp = document.createElement("input");
-      inp.className = "form-input";
-      inp.id = "f-accountUsed";
-      inp.placeholder = "e.g. TD Checking ···1234";
-      group.appendChild(inp);
-    }
-  }
+function propColor(property) {
+  const colors = { Allison: "#4a7c59", Karmel: "#7c4a4a", Prospect: "#4a5d7c", Boathouse: "#7c6b4a" };
+  return colors[property] || "#888";
+}
 
-  function onWantToChangeToggle() {
-    const checked = document.getElementById("f-wantToChange").checked;
-    document.getElementById("change-fields").style.display = checked ? "block" : "none";
-  }
-
-  function onChangeToMethodChange() {
-    const method = document.getElementById("f-changeToMethod").value;
-    const group = document.getElementById("changeto-card-group");
-    // Remove existing date field if present outside grid
-    const extraDate = document.getElementById("extra-date-group");
-    if (extraDate) extraDate.remove();
-
-    if (method === "Credit Card") {
-      group.innerHTML = `<label class="form-label">New Card</label><select class="form-input" id="f-changeToCard"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}</select>`;
-      // Add date field below grid
-      const dateGroup = document.createElement("div");
-      dateGroup.id = "extra-date-group";
-      dateGroup.className = "form-group";
-      dateGroup.style.cssText = "margin-top:16px;max-width:calc(50% - 14px)";
-      dateGroup.innerHTML = `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" />`;
-      document.getElementById("change-fields").appendChild(dateGroup);
-    } else {
-      group.innerHTML = `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" />`;
-    }
-  }
-
-  function getVal(id) {
-    const el = document.getElementById(id);
-    if (!el) return "";
-    if (el.type === "checkbox") return el.checked;
-    return el.value || "";
-  }
-
-  async function handleSave(id, isEditStr) {
-    const vendor = getVal("f-vendor").trim();
-    if (!vendor) { showToast("Please enter at least a Vendor / Biller name.", "error"); return; }
-
-    const bill = {
-      id,
-      property: getVal("f-property"),
-      vendor,
-      description: getVal("f-description"),
-      currentMethod: getVal("f-currentMethod"),
-      accountUsed: getVal("f-accountUsed"),
-      wantToChange: getVal("f-wantToChange"),
-      changeToMethod: getVal("f-changeToMethod"),
-      changeToCard: getVal("f-changeToCard"),
-      dateChanged: getVal("f-dateChanged"),
-      notes: getVal("f-notes"),
-      createdAt: isEditStr === "true" ? (editingBill?.createdAt || new Date().toLocaleDateString()) : new Date().toLocaleDateString()
-    };
-
-    const btn = document.querySelector(".save-btn");
-    btn.textContent = "Saving...";
-    btn.disabled = true;
-
-    if (isEditStr === "true") {
-      await updateBill(bill);
-      showToast("Bill updated.");
-    } else {
-      await saveBill(bill);
-      showToast("Bill added.");
-    }
-
-    bills = await loadBills();
-    currentView = "dashboard";
-    editingBill = null;
-    render();
-  }
-
-  async function handleDelete(id) {
-    if (!confirm("Delete this bill?")) return;
-    await deleteBill(id);
-    bills = await loadBills();
-    currentView = "dashboard";
-    editingBill = null;
-    showToast("Bill removed.");
-    render();
-  }
-
-  function openAdd() {
-    editingBill = null;
-    currentView = "add";
-    render();
-  }
-
-  function openEdit(id) {
-    editingBill = bills.find(b => b.id === id);
-    currentView = "edit";
-    render();
-  }
-
-  // ── Init ──────────────────────────────────────────────────────────────
-  (async () => {
-    document.getElementById("app").innerHTML = `
-      <div class="loading">
-        <div class="spinner"></div>
-        <p style="color:#8b7355;margin-top:16px;font-family:'Playfair Display',serif">Loading your bills...</p>
-      </div>`;
-    bills = await loadBills();
-    render();
-  })();
-</script>
-</body>
-</html>
+const styles = {
+  root: { minHeight: "100vh", background: "#f5f0e8", fontFamily: "'Lato', sans-serif" },
+  loading: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh" },
+  spinner: { width: 32, height: 32, border: "3px solid #ddd", borderTop: "3px solid #8b4513", borderRadius: "50%", animation: "spin 0.8s linear infinite" },
+  toast: { position: "fixed", top: 20, right: 20, color: "#fff", padding: "12px 20px", borderRadius: 8, fontFamily: "'Lato', sans-serif", fontWeight: 700, fontSize: 14, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.2)", animation: "fadeIn 0.2s ease" },
+  header: { background: "#2c1810", padding: "0 0 1px" },
+  headerInner: { maxWidth: 1100, margin: "0 auto", padding: "28px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 },
+  title: { fontFamily: "'Playfair Display', serif", fontSize: 32, color: "#f5e6d0", fontWeight: 700, letterSpacing: "-0.5px" },
+  subtitle: { fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#8b7355", marginTop: 2, letterSpacing: "2px", textTransform: "uppercase" },
+  headerStats: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" },
+  alertBadge: { background: "#c0392b", color: "#fff", padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 700 },
+  statPill: { background: "rgba(255,255,255,0.08)", color: "#c4a882", padding: "6px 14px", borderRadius: 20, fontSize: 13 },
+  exportBtn: { background: "transparent", border: "1.5px solid #c4a882", color: "#c4a882", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+  main: { maxWidth: 1100, margin: "0 auto", padding: "32px 24px" },
+  controls: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 },
+  filters: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" },
+  filterLabel: { fontSize: 13, color: "#8b7355", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" },
+  select: { background: "#fff", border: "1.5px solid #d4c4a8", borderRadius: 8, padding: "8px 12px", fontSize: 14, color: "#2c1810", cursor: "pointer", outline: "none" },
+  addBtn: { background: "#2c1810", color: "#f5e6d0", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: "0.5px", fontFamily: "'Lato', sans-serif" },
+  propCards: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 28 },
+  propCard: { background: "#fff", border: "1.5px solid #e8dfd0", borderRadius: 12, padding: "16px", cursor: "pointer", transition: "all 0.2s", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" },
+  propCardName: { fontFamily: "'Playfair Display', serif", fontSize: 16, color: "#2c1810", fontWeight: 600 },
+  propCardCount: { fontSize: 32, fontWeight: 700, color: "#8b4513", fontFamily: "'Playfair Display', serif", lineHeight: 1.1, marginTop: 4 },
+  propCardLabel: { fontSize: 11, color: "#aaa", textTransform: "uppercase", letterSpacing: "1.5px" },
+  propCardAlert: { marginTop: 8, fontSize: 11, color: "#c0392b", fontWeight: 700 },
+  empty: { textAlign: "center", padding: "80px 20px", background: "#fff", borderRadius: 16, border: "1.5px dashed #d4c4a8" },
+  tableWrap: { background: "#fff", borderRadius: 16, border: "1.5px solid #e8dfd0", overflow: "auto", boxShadow: "0 4px 20px rgba(0,0,0,0.04)" },
+  table: { width: "100%", borderCollapse: "collapse", minWidth: 720 },
+  th: { background: "#2c1810", color: "#c4a882", padding: "14px 16px", textAlign: "left", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", whiteSpace: "nowrap" },
+  tr: { borderBottom: "1px solid #f0e8dc", transition: "background 0.15s" },
+  td: { padding: "14px 16px", fontSize: 14, color: "#444", verticalAlign: "middle" },
+  propTag: { color: "#fff", padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" },
+  methodTag: { background: "#f5f0e8", color: "#6b4c2a", padding: "3px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" },
+  editBtn: { background: "transparent", border: "1.5px solid #8b4513", color: "#8b4513", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+  formCard: { background: "#fff", borderRadius: 16, border: "1.5px solid #e8dfd0", padding: "36px", maxWidth: 800, margin: "0 auto", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
+  formHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 },
+  formTitle: { fontFamily: "'Playfair Display', serif", fontSize: 26, color: "#2c1810", fontWeight: 700 },
+  cancelBtn: { background: "transparent", border: "none", color: "#8b7355", cursor: "pointer", fontSize: 14, fontFamily: "'Lato', sans-serif", fontWeight: 700 },
+  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 28px" },
+  formGroup: { display: "flex", flexDirection: "column", gap: 6 },
+  label: { fontSize: 12, fontWeight: 700, color: "#8b7355", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 2 },
+  input: { border: "1.5px solid #d4c4a8", borderRadius: 8, padding: "10px 12px", fontSize: 14, color: "#2c1810", outline: "none", background: "#fdfaf6", fontFamily: "'Lato', sans-serif" },
+  changeSection: { marginTop: 28, background: "#fdf8f0", border: "1.5px solid #e8dfd0", borderRadius: 12, padding: "20px 24px" },
+  changeSectionHeader: { fontFamily: "'Playfair Display', serif", fontSize: 16, color: "#2c1810", fontWeight: 600, marginBottom: 14 },
+  checkRow: { display: "flex", alignItems: "center", gap: 10 },
+  formActions: { display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 28, paddingTop: 20, borderTop: "1px solid #f0e8dc" },
+  deleteBtn: { background: "transparent", border: "1.5px solid #c0392b", color: "#c0392b", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+  saveBtn: { background: "#2c1810", color: "#f5e6d0", border: "none", borderRadius: 8, padding: "10px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+  // Modal
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
+  modal: { background: "#fff", borderRadius: 16, padding: "32px", maxWidth: 560, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" },
+  modalTitle: { fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#2c1810", marginBottom: 12 },
+  modalText: { color: "#555", fontSize: 14, marginBottom: 14 },
+  stepList: { color: "#444", fontSize: 14, lineHeight: 2, paddingLeft: 20, marginBottom: 16 },
+  exportTextarea: { width: "100%", height: 160, border: "1.5px solid #d4c4a8", borderRadius: 8, padding: "10px 12px", fontSize: 12, fontFamily: "monospace", color: "#333", background: "#fdfaf6", resize: "vertical", outline: "none" },
+  modalActions: { display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 16 },
+  cancelBtn2: { background: "transparent", border: "1.5px solid #c0392b", color: "#c0392b", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+  copyBtn: { color: "#f5e6d0", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif", transition: "background 0.2s" },
+};
