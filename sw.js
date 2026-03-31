@@ -1,5 +1,5 @@
 // sw.js — Property Bills Manager Service Worker
-const CACHE_VERSION = "bills-tracker-2026-03-29-v1.4";
+const CACHE_VERSION = "bills-tracker-2026-03-30-v1.5";
 const CACHE_NAME = CACHE_VERSION;
 
 self.addEventListener("install", event => { self.skipWaiting(); });

@@ -124,8 +124,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
 <script>
-  const BUILD_VERSION = "2026-03-29 · v1.4";
+  // ── Build Info ────────────────────────────────────────────────────────
+  const BUILD_VERSION = "2026-03-30 · v1.5";
 
+  // ── Worker Config ─────────────────────────────────────────────────────
+  const WORKER_URL = "https://grasse-apps-proxy.ed-53c.workers.dev";
+  const APP_ID = "bills";
+  const TABLE = "BILLSProperty";
+
+  const PROPERTIES = ["Allison", "Karmel", "Prospect", "Boathouse"];
+  const PAYMENT_METHODS = ["Credit Card", "Bank Direct Withdrawal (ACH)", "Bank Bill Pay", "Check by Mail"];
+  const CREDIT_CARDS = ["Capital One", "Citi", "Discover"];
+  const PROP_COLORS = { Allison: "#4a7c59", Karmel: "#7c4a4a", Prospect: "#4a5d7c", Boathouse: "#7c6b4a" };
+
+  let bills = [];
+  let currentView = "dashboard";
+  let editingBill = null;
+  let filterProperty = "All";
+  let filterStatus = "All";
+
+  // ── Service Worker ────────────────────────────────────────────────────
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
       reg.addEventListener('updatefound', () => {
@@ -145,54 +163,94 @@
     window.location.reload(true);
   }
 
-  const SUPABASE_URL = "https://viprflxaudxjwsvytrnn.supabase.co";
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpcHJmbHhhdWR4andzdnl0cm5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Nzc0NjcsImV4cCI6MjA5MDE1MzQ2N30.GCaasqLjpBvcARUO7poDTKH_bvQfasbAX9yLKOeKGK0";
-  const TABLE = "property_bills";
-  const PROPERTIES = ["Allison", "Karmel", "Prospect", "Boathouse"];
-  const PAYMENT_METHODS = ["Credit Card", "Bank Direct Withdrawal (ACH)", "Bank Bill Pay", "Check by Mail"];
-  const CREDIT_CARDS = ["Capital One", "Citi", "Discover"];
-  const PROP_COLORS = { Allison: "#4a7c59", Karmel: "#7c4a4a", Prospect: "#4a5d7c", Boathouse: "#7c6b4a" };
-
-  let bills = [];
-  let currentView = "dashboard";
-  let editingBill = null;
-  let filterProperty = "All";
-  let filterStatus = "All";
-
-  async function sbFetch(path, options = {}) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": options.prefer || "return=representation", ...options.headers },
-      ...options
+  // ── Worker Client ─────────────────────────────────────────────────────
+  async function workerCall(payload) {
+    const r = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appId: APP_ID, ...payload })
     });
-    if (!res.ok) { const err = await res.text(); throw new Error(err); }
-    const text = await res.text();
-    return text ? JSON.parse(text) : [];
+    if (!r.ok) throw new Error('Worker error: ' + r.status);
+    return r.json();
   }
 
+  async function sbGet(table, filters) {
+    return workerCall({ method: 'SELECT', table, filters: filters || '' });
+  }
+
+  async function sbInsert(table, row) {
+    return workerCall({ method: 'INSERT', table, data: row });
+  }
+
+  async function sbUpdate(table, id, row) {
+    return workerCall({ method: 'UPDATE', table, data: row, idField: 'id', idValue: id });
+  }
+
+  async function sbDelete(table, id) {
+    return workerCall({ method: 'DELETE', table, idField: 'id', idValue: id });
+  }
+
+  // ── Data Helpers ──────────────────────────────────────────────────────
   async function loadBills() {
     try {
-      const data = await sbFetch(`${TABLE}?order=created_at.asc`, { method: "GET" });
-      return data.map(dbToApp);
+      const data = await sbGet(TABLE, 'order=created_at.asc');
+      return Array.isArray(data) ? data.map(dbToApp) : [];
     } catch (e) {
+      console.error('Load error:', e);
       showToast("Could not load bills. Check connection.", "error");
       return [];
     }
   }
 
-  async function saveBill(bill) { await sbFetch(TABLE, { method: "POST", prefer: "return=minimal", body: JSON.stringify(appToDb(bill)) }); }
-  async function updateBill(bill) { await sbFetch(`${TABLE}?id=eq.${bill.id}`, { method: "PATCH", prefer: "return=minimal", body: JSON.stringify(appToDb(bill)) }); }
-  async function deleteBill(id) { await sbFetch(`${TABLE}?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" }); }
+  async function saveBill(bill) {
+    await sbInsert(TABLE, appToDb(bill));
+  }
+
+  async function updateBill(bill) {
+    await sbUpdate(TABLE, bill.id, appToDb(bill));
+  }
+
+  async function deleteBill(id) {
+    await sbDelete(TABLE, id);
+  }
 
   function appToDb(b) {
-    return { id: b.id, property: b.property||null, vendor: b.vendor, description: b.description||null, current_method: b.currentMethod||null, account_used: b.accountUsed||null, want_to_change: b.wantToChange||false, change_to_method: b.changeToMethod||null, change_to_card: b.changeToCard||null, date_changed: b.dateChanged||null, notes: b.notes||null, created_at: b.createdAt||new Date().toLocaleDateString() };
+    return {
+      id: b.id,
+      property: b.property || null,
+      vendor: b.vendor,
+      description: b.description || null,
+      current_method: b.currentMethod || null,
+      account_used: b.accountUsed || null,
+      want_to_change: b.wantToChange || false,
+      change_to_method: b.changeToMethod || null,
+      change_to_card: b.changeToCard || null,
+      date_changed: b.dateChanged || null,
+      notes: b.notes || null,
+      created_at: b.createdAt || new Date().toLocaleDateString()
+    };
   }
 
   function dbToApp(r) {
-    return { id: r.id, property: r.property||"", vendor: r.vendor||"", description: r.description||"", currentMethod: r.current_method||"", accountUsed: r.account_used||"", wantToChange: r.want_to_change||false, changeToMethod: r.change_to_method||"", changeToCard: r.change_to_card||"", dateChanged: r.date_changed||"", notes: r.notes||"", createdAt: r.created_at||"" };
+    return {
+      id: r.id,
+      property: r.property || "",
+      vendor: r.vendor || "",
+      description: r.description || "",
+      currentMethod: r.current_method || "",
+      accountUsed: r.account_used || "",
+      wantToChange: r.want_to_change || false,
+      changeToMethod: r.change_to_method || "",
+      changeToCard: r.change_to_card || "",
+      dateChanged: r.date_changed || "",
+      notes: r.notes || "",
+      createdAt: r.created_at || ""
+    };
   }
 
   function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
+  // ── Toast ─────────────────────────────────────────────────────────────
   function showToast(msg, type = "success") {
     const t = document.createElement("div");
     t.className = "toast";
@@ -202,6 +260,7 @@
     setTimeout(() => t.remove(), 2800);
   }
 
+  // ── Computed ──────────────────────────────────────────────────────────
   function billNeedsAttention(b) { return !b.property || !b.currentMethod; }
 
   function getFiltered() {
@@ -262,7 +321,7 @@
   function generatePdf(propFilter, statusFilter) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
-    let data = bills.filter(b => {
+    const data = bills.filter(b => {
       const propMatch = propFilter === "All Properties" || b.property === propFilter;
       const statusMatch =
         statusFilter === "all" ? true :
@@ -283,8 +342,7 @@
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(196, 168, 130);
-    const subtitle = `${propFilter} · ${statusFilter === "all" ? "All Bills" : statusFilter.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())} · ${data.length} records · ${new Date().toLocaleDateString()}`;
-    doc.text(subtitle, 40, 44);
+    doc.text(`${propFilter} · ${statusFilter === "all" ? "All Bills" : statusFilter.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())} · ${data.length} records · ${new Date().toLocaleDateString()}`, 40, 44);
     const statusLabel = (b) => {
       if (billNeedsAttention(b)) return "Incomplete";
       if (b.wantToChange && !b.dateChanged) return "Change Pending";
@@ -306,9 +364,8 @@
         doc.text(`Page ${d.pageNumber} · Property Bills Manager · Build ${BUILD_VERSION}`, 30, pageH - 15);
       }
     });
-    const filename = `bills-${propFilter.replace(/ /g,"-").toLowerCase()}-${new Date().toISOString().slice(0,10)}.pdf`;
-    doc.save(filename);
-    showToast(`PDF saved: ${filename}`);
+    doc.save(`bills-${propFilter.replace(/ /g,"-").toLowerCase()}-${new Date().toISOString().slice(0,10)}.pdf`);
+    showToast("PDF exported.");
   }
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -485,6 +542,7 @@
     }
   }
 
+  // ── Form Helpers ──────────────────────────────────────────────────────
   function onMethodChange() {
     const method = document.getElementById("f-currentMethod").value;
     const group = document.getElementById("account-group");
@@ -510,7 +568,8 @@
     document.getElementById("extra-date-group")?.remove();
     if (method === "Credit Card") {
       group.innerHTML = `<label class="form-label">New Card</label><select class="form-input" id="f-changeToCard"><option value="">Select card...</option>${CREDIT_CARDS.map(c=>`<option>${c}</option>`).join("")}</select>`;
-      const d = document.createElement("div"); d.id = "extra-date-group"; d.className = "form-group"; d.style.cssText = "margin-top:16px;max-width:calc(50% - 14px)";
+      const d = document.createElement("div"); d.id = "extra-date-group"; d.className = "form-group";
+      d.style.cssText = "margin-top:16px;max-width:calc(50% - 14px)";
       d.innerHTML = `<label class="form-label">Date Changed <span style="color:#aaa;font-weight:300">(fill in when done)</span></label><input type="date" class="form-input" id="f-dateChanged" />`;
       document.getElementById("change-fields").appendChild(d);
     } else {
@@ -528,27 +587,52 @@
   async function handleSave(id, isEditStr) {
     const vendor = getVal("f-vendor").trim();
     if (!vendor) { showToast("Please enter at least a Vendor / Biller name.", "error"); return; }
-    const bill = { id, vendor, property: getVal("f-property"), description: getVal("f-description"), currentMethod: getVal("f-currentMethod"), accountUsed: getVal("f-accountUsed"), wantToChange: getVal("f-wantToChange"), changeToMethod: getVal("f-changeToMethod"), changeToCard: getVal("f-changeToCard"), dateChanged: getVal("f-dateChanged"), notes: getVal("f-notes"), createdAt: isEditStr==="true" ? (editingBill?.createdAt||new Date().toLocaleDateString()) : new Date().toLocaleDateString() };
+    const bill = {
+      id, vendor,
+      property: getVal("f-property"),
+      description: getVal("f-description"),
+      currentMethod: getVal("f-currentMethod"),
+      accountUsed: getVal("f-accountUsed"),
+      wantToChange: getVal("f-wantToChange"),
+      changeToMethod: getVal("f-changeToMethod"),
+      changeToCard: getVal("f-changeToCard"),
+      dateChanged: getVal("f-dateChanged"),
+      notes: getVal("f-notes"),
+      createdAt: isEditStr === "true" ? (editingBill?.createdAt || new Date().toLocaleDateString()) : new Date().toLocaleDateString()
+    };
     const btn = document.querySelector(".save-btn");
     btn.textContent = "Saving..."; btn.disabled = true;
     try {
       if (isEditStr === "true") { await updateBill(bill); showToast("Bill updated."); }
       else { await saveBill(bill); showToast("Bill added."); }
       bills = await loadBills(); currentView = "dashboard"; editingBill = null; render();
-    } catch(e) { showToast("Save failed.", "error"); btn.textContent = isEditStr==="true"?"Save Changes":"Add Bill"; btn.disabled = false; }
+    } catch(e) {
+      console.error(e);
+      showToast("Save failed. Please try again.", "error");
+      btn.textContent = isEditStr === "true" ? "Save Changes" : "Add Bill";
+      btn.disabled = false;
+    }
   }
 
   async function handleDelete(id) {
     if (!confirm("Delete this bill?")) return;
-    try { await deleteBill(id); bills = await loadBills(); currentView = "dashboard"; editingBill = null; showToast("Bill removed."); render(); }
-    catch(e) { showToast("Delete failed.", "error"); }
+    try {
+      await deleteBill(id);
+      bills = await loadBills(); currentView = "dashboard"; editingBill = null;
+      showToast("Bill removed."); render();
+    } catch(e) { showToast("Delete failed.", "error"); }
   }
 
   function openAdd() { editingBill = null; currentView = "add"; render(); }
   function openEdit(id) { editingBill = bills.find(b => b.id === id); currentView = "edit"; render(); }
 
+  // ── Init ──────────────────────────────────────────────────────────────
   (async () => {
-    document.getElementById("app").innerHTML = `<div class="loading"><div class="spinner"></div><p style="color:#8b7355;margin-top:16px;font-family:'Playfair Display',serif">Loading your bills...</p></div>`;
+    document.getElementById("app").innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <p style="color:#8b7355;margin-top:16px;font-family:'Playfair Display',serif">Loading your bills...</p>
+      </div>`;
     bills = await loadBills();
     render();
   })();
