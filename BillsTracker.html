@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Property Bills Manager</title>
 
-  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAApElEQVR42mPUkRBgoCVgYqAxGHwWnDx3gIYWQEwnyQ4m8txOvB1MZIcMkXYwEkym+A0yN3KgyAcEnUlQARPlCQa/MpxBRGpyxBVcTNQyHZcuJmqZjksvShBRYjSusGKiuuloRjFR3XQ0A9FTEeU2oaUlFqyKpsU7I3OzFu4lWxnN6wMWItWhORaPt4ZdlYk9iIj0PjHKRmCrYtQCqgPG0cYvIQAAnVhHPoMz5j4AAAAASUVORK5CYII=" />
-  <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAACtUlEQVR42u3cu00rQRSA4fURBTikCCISUiQKIacgcgpBIiWhJgJCHgK83j2P7y8AeXa+e2aw8T1cXR4X6avCIxAcgkNwCA7BITgEh+AQHIJDgkNwCA7BITgEh+AQHIJDcMzu9e3FQ4DjWxl8wPHTzODjo4PvrXxH4eb6Fo4jGT80mUiQ4YoKx/93fayPIIMPOE7d6YE+Zl1IT9/gUffTQThW/Kc/hEiQ4YgZjeMceznBR5DBx1Ac596/3j7aXki33Lau99Mgw/wYNDl23KpmIyTIMEJG4MiwN518BBl8dL5z5NyMBvePIMP86Dk5SmxA3RESZHid3XDUeuJFfQQZXnOTO0f1W16t+0eQYQnlcbR5Z6nQQmocKy0/9sx/xAQZ1lUVR+8/tUq+urzHypwvEaU9X4IMi62EY+AXD3MuOd2xMvx/1Ul1xAQZnkABHGRkew4pjhUscp4vQYb5kRQHGZkfTpDBR7o7Bxn5ryBBhhGSZXJgUWh+BBnmx/44yCj3GIMMPva8c5BR9AoSZBghO0wOLKrPjyDD/NgUBxk9fAQZfGyEg4xOPta8kJLR7Iq6Dg4sWvoIMhwx58JBRmMfQQYf6+Mgo72Pf15IyZhwRf0zDizm+AgyHDEr4CBjmo+z/7EPUqmuEdv9KqvewSE4BIfgEByCQ3AIDsEhOASH9KmL3V/B4/3diT/h4ek54ZNtsC6TQ3AIDsEhOASH4FCxLhqv7fR3Gn5TzndZTA7BITgEh+AQHIJDcEhwCA7BITgEh+BQ+vb/yL7rR94N1mVyCA7BITgEh+AQHIJDcAgOwSHBITgEh+AQHIJDcAgOwSE4JDgEh+AQHIJDcAgOwSE4BIcEh+AQHIJDm3S4ujx6CjI5BIfgEByCQ3AIDsEhOASHBIfgEByCQ3AIDsEhOASH4JCWZVmWd18lKBXIQPUYAAAAAElFTkSuQmCC" />
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAoUlEQVR42mPUkRBgoCVgYqAxGHwWnDx3gIYWQEwnyQ5GIiMZq6HmRg7U8QEuJxPjFSYKA52gHfiCiPiwxhNWOC0gNbXgsgaLBWQYjccOJiqajlU7ExVNx2oINIioYjTW4GKikelwY9EjmXLL0OKZBVPFtHhnZG7Wwr14jCOoeOjXByzEKEILByJDb+B8QIy7iFc8Aiv9UQuGngWMo41fQgAAClY/2g67VyoAAAAASUVORK5CYII=" />
+  <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAACr0lEQVR42u3cMVLjQBBAUdzlAzj0IRyRkFLFQcg5EDkHoYqUhDMRkIKxYSRNd7+f7y6SHt3jRbu70/FwI31XuAWCQ3AIDsEhOASH4BAcgkNwSHAIDsEhOASH4BAcCXv/eHMT4PhRBh9wnJsZfHy184LxGQp3t/cmBxmOIHBc/+w7+wgy+HDmGPCwux1Bgox1fi0clWU09BFk8NH6zLHQ4yx/BAkyjJCmOJZ+frV9BBl89DpzbPLA6h1BggwjpAuObZ9QMR9BBh/FzxyzPZIa548KOKb9Zs1OJMiwYmrimP/up/aRda3kuulJ90tKHEm/HdMRCTJ85UVwZD/i5fr606yVSn+5lGW/5MBR8ief8xMJMlxXVhy136aZ/OrmXSt93uOddr8EGS420+Ro+88PZxshQYZrTzA5/Jcps82PIMP8mHpykDHnCAkyjJAZJwcWk8+PIMP8mGtykJFihAQZRsgUkwOLXPMjyDA/Np4cZGQcIUGGEbLN5MAi9fwIMsyPtXGQUcDHImuFjBorZjAOLCr5CDKsmMVxkFHPx5i1QkbJFfNfHFgU9hFkWDHjcZBR3scf1woZHVbM1Tiw6OMjyLBiBuAgo5uPS9cKGQ1XzO84sGjrI8iwYgZ/lEWqwCfVwZ9W1Co4BIfgEByCQ5u2X/nPe358GPVbPb28prjFeS/Z5BAcgkNwCA7BITgEh+AQHIJDgkNwCA7BITgEh+AQHIJD/dpXvbCBr/VeUpa3nU0OwaFia6Xk+K16ySaH4BAcgkNwCA7BITgEh+AQHBIcgkNwCA7BITgEh+AQHIJDgkNwCA7BITgEh+AQHIJDcEhwCA7BITgEh+AQHIJDcAgOwSHBITgEh+AQHIJDWdqdjgd3QSaH4BAcgkNwCA7BITgEh+CQ4BAcgkNwCA7BoQR9AkS6G0VTQPj7AAAAAElFTkSuQmCC" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Bills" />
@@ -125,7 +125,7 @@
 
 <script>
   // ── Build Info ────────────────────────────────────────────────────────
-  const BUILD_VERSION = "2026-04-24 · v1.6";
+  const BUILD_VERSION = "2026-04-24 · v1.7";
 
   // ── Worker Config ─────────────────────────────────────────────────────
   const WORKER_URL = "https://grasse-apps-proxy.ed-53c.workers.dev";
